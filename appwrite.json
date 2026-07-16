@@ -1,0 +1,504 @@
+{
+  "projectId": "handygo",
+  "projectName": "HandyGo",
+  "settings": {
+    "services": {
+      "account": true,
+      "avatars": true,
+      "databases": true,
+      "functions": true,
+      "storage": true,
+      "realtime": true
+    }
+  },
+  "databases": [
+    {
+      "$id": "handygo",
+      "name": "handygo",
+      "enabled": true
+    }
+  ],
+  "collections": [
+    {
+      "$id": "users",
+      "$permissions": ["read(\"users\")"],
+      "databaseId": "handygo",
+      "name": "users",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        { "key": "authId", "type": "string", "size": 64, "required": true },
+        { "key": "role", "type": "string", "size": 16, "required": true },
+        { "key": "name", "type": "string", "size": 128, "required": true },
+        { "key": "phone", "type": "string", "size": 32, "required": false },
+        { "key": "email", "type": "string", "size": 128, "required": false },
+        { "key": "photoUrl", "type": "string", "size": 255, "required": false },
+        { "key": "language", "type": "string", "size": 16, "required": false, "default": "en" },
+        { "key": "fcmToken", "type": "string", "size": 255, "required": false },
+        { "key": "status", "type": "string", "size": 16, "required": false, "default": "active" },
+        { "key": "riskScore", "type": "integer", "required": false, "default": 0, "min": 0, "max": 100 },
+        { "key": "createdVia", "type": "string", "size": 32, "required": false }
+      ],
+      "indexes": [
+        { "key": "idx_authId", "type": "unique", "attributes": ["authId"] },
+        { "key": "idx_role", "type": "key", "attributes": ["role"] }
+      ]
+    },
+    {
+      "$id": "customer_profiles",
+      "$permissions": ["read(\"users\")"],
+      "databaseId": "handygo",
+      "name": "customer_profiles",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        { "key": "userId", "type": "string", "size": 64, "required": true },
+        { "key": "defaultAddress", "type": "string", "size": 255, "required": false },
+        { "key": "currentLat", "type": "double", "required": false },
+        { "key": "currentLng", "type": "double", "required": false },
+        { "key": "emergencyContactName", "type": "string", "size": 128, "required": false },
+        { "key": "emergencyContactPhone", "type": "string", "size": 32, "required": false },
+        { "key": "savedAddresses", "type": "string", "size": 4000, "required": false, "array": true },
+        { "key": "totalBookings", "type": "integer", "required": false, "default": 0 },
+        { "key": "trustScore", "type": "integer", "required": false, "default": 100, "min": 0, "max": 100 }
+      ],
+      "indexes": [{ "key": "idx_userId", "type": "unique", "attributes": ["userId"] }]
+    },
+    {
+      "$id": "worker_profiles",
+      "$permissions": ["read(\"users\")"],
+      "databaseId": "handygo",
+      "name": "worker_profiles",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        { "key": "userId", "type": "string", "size": 64, "required": true },
+        { "key": "skills", "type": "string", "size": 64, "required": false, "array": true },
+        { "key": "experienceYears", "type": "integer", "required": false, "default": 0 },
+        { "key": "serviceAreaLat", "type": "double", "required": false },
+        { "key": "serviceAreaLng", "type": "double", "required": false },
+        { "key": "serviceRadiusKm", "type": "double", "required": false, "default": 8 },
+        { "key": "cnicFrontUrl", "type": "string", "size": 255, "required": false },
+        { "key": "cnicBackUrl", "type": "string", "size": 255, "required": false },
+        { "key": "selfieUrl", "type": "string", "size": 255, "required": false },
+        { "key": "verificationStatus", "type": "string", "size": 24, "required": false, "default": "incomplete" },
+        { "key": "availability", "type": "string", "size": 16, "required": false, "default": "offline" },
+        { "key": "rating", "type": "double", "required": false, "default": 0 },
+        { "key": "jobsCompleted", "type": "integer", "required": false, "default": 0 },
+        { "key": "walletBalance", "type": "double", "required": false, "default": 0 },
+        { "key": "pendingBalance", "type": "double", "required": false, "default": 0 },
+        { "key": "performanceScore", "type": "integer", "required": false, "default": 50, "min": 0, "max": 100 },
+        { "key": "currentLat", "type": "double", "required": false },
+        { "key": "currentLng", "type": "double", "required": false }
+      ],
+      "indexes": [
+        { "key": "idx_userId", "type": "unique", "attributes": ["userId"] },
+        { "key": "idx_availability", "type": "key", "attributes": ["availability"] },
+        { "key": "idx_verificationStatus", "type": "key", "attributes": ["verificationStatus"] }
+      ]
+    },
+    {
+      "$id": "service_categories",
+      "$permissions": ["read(\"any\")"],
+      "databaseId": "handygo",
+      "name": "service_categories",
+      "enabled": true,
+      "documentSecurity": false,
+      "attributes": [
+        { "key": "name", "type": "string", "size": 64, "required": true },
+        { "key": "icon", "type": "string", "size": 64, "required": false },
+        { "key": "basePriceMin", "type": "double", "required": true },
+        { "key": "basePriceMax", "type": "double", "required": true },
+        { "key": "avgDurationMins", "type": "integer", "required": false, "default": 60 },
+        { "key": "keywords", "type": "string", "size": 64, "required": false, "array": true }
+      ],
+      "indexes": [{ "key": "idx_name", "type": "unique", "attributes": ["name"] }]
+    },
+    {
+      "$id": "bookings",
+      "$permissions": ["read(\"users\")"],
+      "databaseId": "handygo",
+      "name": "bookings",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        { "key": "customerId", "type": "string", "size": 64, "required": true },
+        { "key": "workerId", "type": "string", "size": 64, "required": false },
+        { "key": "categoryId", "type": "string", "size": 64, "required": true },
+        { "key": "detectedByAI", "type": "boolean", "required": false, "default": false },
+        { "key": "problemText", "type": "string", "size": 2000, "required": false },
+        { "key": "problemImages", "type": "string", "size": 255, "required": false, "array": true },
+        { "key": "voiceNoteUrl", "type": "string", "size": 255, "required": false },
+        { "key": "addressText", "type": "string", "size": 255, "required": false },
+        { "key": "lat", "type": "double", "required": true },
+        { "key": "lng", "type": "double", "required": true },
+        { "key": "scheduledAt", "type": "datetime", "required": false },
+        { "key": "aiEstimateMin", "type": "double", "required": false },
+        { "key": "aiEstimateMax", "type": "double", "required": false },
+        { "key": "aiDurationMins", "type": "integer", "required": false },
+        { "key": "aiUrgency", "type": "string", "size": 16, "required": false, "default": "normal" },
+        { "key": "aiConfidence", "type": "double", "required": false },
+        { "key": "aiSuggestedSolution", "type": "string", "size": 1000, "required": false },
+        { "key": "finalQuote", "type": "double", "required": false },
+        { "key": "additionalCharges", "type": "double", "required": false, "default": 0 },
+        { "key": "status", "type": "string", "size": 24, "required": true, "default": "draft" },
+        { "key": "otp", "type": "string", "size": 8, "required": false },
+        { "key": "ratingGiven", "type": "integer", "required": false, "min": 1, "max": 5 },
+        { "key": "reviewText", "type": "string", "size": 1000, "required": false },
+        { "key": "workSummary", "type": "string", "size": 2000, "required": false }
+      ],
+      "indexes": [
+        { "key": "idx_customerId", "type": "key", "attributes": ["customerId"] },
+        { "key": "idx_workerId", "type": "key", "attributes": ["workerId"] },
+        { "key": "idx_status", "type": "key", "attributes": ["status"] }
+      ]
+    },
+    {
+      "$id": "worker_offers",
+      "$permissions": ["read(\"users\")"],
+      "databaseId": "handygo",
+      "name": "worker_offers",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        { "key": "bookingId", "type": "string", "size": 64, "required": true },
+        { "key": "workerId", "type": "string", "size": 64, "required": true },
+        { "key": "quote", "type": "double", "required": true },
+        { "key": "etaMins", "type": "integer", "required": false },
+        { "key": "distanceKm", "type": "double", "required": false },
+        { "key": "message", "type": "string", "size": 1000, "required": false },
+        { "key": "reason", "type": "string", "size": 500, "required": false },
+        { "key": "status", "type": "string", "size": 16, "required": false, "default": "sent" },
+        { "key": "isBestMatch", "type": "boolean", "required": false, "default": false },
+        { "key": "flaggedSuspicious", "type": "boolean", "required": false, "default": false }
+      ],
+      "indexes": [
+        { "key": "idx_bookingId", "type": "key", "attributes": ["bookingId"] },
+        { "key": "idx_workerId", "type": "key", "attributes": ["workerId"] }
+      ]
+    },
+    {
+      "$id": "booking_status_history",
+      "$permissions": ["read(\"users\")"],
+      "databaseId": "handygo",
+      "name": "booking_status_history",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        { "key": "bookingId", "type": "string", "size": 64, "required": true },
+        { "key": "status", "type": "string", "size": 24, "required": true },
+        { "key": "changedByRole", "type": "string", "size": 16, "required": true },
+        { "key": "changedById", "type": "string", "size": 64, "required": false },
+        { "key": "note", "type": "string", "size": 500, "required": false },
+        { "key": "timestamp", "type": "datetime", "required": true }
+      ],
+      "indexes": [{ "key": "idx_bookingId", "type": "key", "attributes": ["bookingId"] }]
+    },
+    {
+      "$id": "messages",
+      "$permissions": ["read(\"users\")"],
+      "databaseId": "handygo",
+      "name": "messages",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        { "key": "bookingId", "type": "string", "size": 64, "required": true },
+        { "key": "senderId", "type": "string", "size": 64, "required": true },
+        { "key": "senderRole", "type": "string", "size": 16, "required": true },
+        { "key": "text", "type": "string", "size": 2000, "required": true },
+        { "key": "translatedText", "type": "string", "size": 2000, "required": false },
+        { "key": "detectedLang", "type": "string", "size": 16, "required": false },
+        { "key": "aiFlagged", "type": "boolean", "required": false, "default": false },
+        { "key": "flagReason", "type": "string", "size": 255, "required": false },
+        { "key": "readAt", "type": "datetime", "required": false }
+      ],
+      "indexes": [{ "key": "idx_bookingId", "type": "key", "attributes": ["bookingId"] }]
+    },
+    {
+      "$id": "notifications",
+      "$permissions": ["read(\"users\")"],
+      "databaseId": "handygo",
+      "name": "notifications",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        { "key": "userId", "type": "string", "size": 64, "required": true },
+        { "key": "role", "type": "string", "size": 16, "required": true },
+        { "key": "type", "type": "string", "size": 32, "required": true },
+        { "key": "title", "type": "string", "size": 128, "required": true },
+        { "key": "body", "type": "string", "size": 500, "required": false },
+        { "key": "bookingId", "type": "string", "size": 64, "required": false },
+        { "key": "read", "type": "boolean", "required": false, "default": false }
+      ],
+      "indexes": [{ "key": "idx_userId", "type": "key", "attributes": ["userId"] }]
+    },
+    {
+      "$id": "transactions",
+      "$permissions": ["read(\"users\")"],
+      "databaseId": "handygo",
+      "name": "transactions",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        { "key": "bookingId", "type": "string", "size": 64, "required": true },
+        { "key": "customerId", "type": "string", "size": 64, "required": true },
+        { "key": "workerId", "type": "string", "size": 64, "required": true },
+        { "key": "serviceCharges", "type": "double", "required": false, "default": 0 },
+        { "key": "materialCharges", "type": "double", "required": false, "default": 0 },
+        { "key": "platformFee", "type": "double", "required": false, "default": 0 },
+        { "key": "discount", "type": "double", "required": false, "default": 0 },
+        { "key": "total", "type": "double", "required": true },
+        { "key": "method", "type": "string", "size": 16, "required": false, "default": "cod" },
+        { "key": "status", "type": "string", "size": 16, "required": false, "default": "pending" },
+        { "key": "commission", "type": "double", "required": false, "default": 0 },
+        { "key": "netToWorker", "type": "double", "required": false, "default": 0 }
+      ],
+      "indexes": [
+        { "key": "idx_bookingId", "type": "unique", "attributes": ["bookingId"] },
+        { "key": "idx_workerId", "type": "key", "attributes": ["workerId"] }
+      ]
+    },
+    {
+      "$id": "worker_locations",
+      "$permissions": ["read(\"users\")"],
+      "databaseId": "handygo",
+      "name": "worker_locations",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        { "key": "workerId", "type": "string", "size": 64, "required": true },
+        { "key": "bookingId", "type": "string", "size": 64, "required": false },
+        { "key": "lat", "type": "double", "required": true },
+        { "key": "lng", "type": "double", "required": true },
+        { "key": "heading", "type": "double", "required": false },
+        { "key": "timestamp", "type": "datetime", "required": true }
+      ],
+      "indexes": [
+        { "key": "idx_workerId", "type": "key", "attributes": ["workerId"] },
+        { "key": "idx_bookingId", "type": "key", "attributes": ["bookingId"] }
+      ]
+    },
+    {
+      "$id": "sos_alerts",
+      "$permissions": ["read(\"users\")"],
+      "databaseId": "handygo",
+      "name": "sos_alerts",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        { "key": "bookingId", "type": "string", "size": 64, "required": false },
+        { "key": "raisedByRole", "type": "string", "size": 16, "required": true },
+        { "key": "raisedById", "type": "string", "size": 64, "required": true },
+        { "key": "counterpartId", "type": "string", "size": 64, "required": false },
+        { "key": "emergencyType", "type": "string", "size": 32, "required": true },
+        { "key": "lat", "type": "double", "required": false },
+        { "key": "lng", "type": "double", "required": false },
+        { "key": "recentMessages", "type": "string", "size": 4000, "required": false },
+        { "key": "evidenceUrls", "type": "string", "size": 255, "required": false, "array": true },
+        { "key": "deviceInfo", "type": "string", "size": 255, "required": false },
+        { "key": "aiRiskLevel", "type": "string", "size": 16, "required": false },
+        { "key": "aiSummary", "type": "string", "size": 1000, "required": false },
+        { "key": "aiSuggestedActions", "type": "string", "size": 255, "required": false, "array": true },
+        { "key": "adminStatus", "type": "string", "size": 16, "required": false, "default": "open" },
+        { "key": "timeline", "type": "string", "size": 4000, "required": false }
+      ],
+      "indexes": [
+        { "key": "idx_adminStatus", "type": "key", "attributes": ["adminStatus"] },
+        { "key": "idx_raisedById", "type": "key", "attributes": ["raisedById"] }
+      ]
+    },
+    {
+      "$id": "fraud_reports",
+      "$permissions": ["read(\"users\")"],
+      "databaseId": "handygo",
+      "name": "fraud_reports",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        { "key": "bookingId", "type": "string", "size": 64, "required": false },
+        { "key": "reportedByRole", "type": "string", "size": 16, "required": true },
+        { "key": "reportedById", "type": "string", "size": 64, "required": true },
+        { "key": "accusedId", "type": "string", "size": 64, "required": false },
+        { "key": "type", "type": "string", "size": 32, "required": true },
+        { "key": "description", "type": "string", "size": 2000, "required": false },
+        { "key": "evidenceUrls", "type": "string", "size": 255, "required": false, "array": true },
+        { "key": "aiSummary", "type": "string", "size": 1000, "required": false },
+        { "key": "aiRecommendation", "type": "string", "size": 500, "required": false },
+        { "key": "adminDecision", "type": "string", "size": 16, "required": false, "default": "pending" },
+        { "key": "status", "type": "string", "size": 16, "required": false, "default": "open" }
+      ],
+      "indexes": [{ "key": "idx_status", "type": "key", "attributes": ["status"] }]
+    },
+    {
+      "$id": "ai_logs",
+      "$permissions": ["read(\"team:admin\")"],
+      "databaseId": "handygo",
+      "name": "ai_logs",
+      "enabled": true,
+      "documentSecurity": false,
+      "attributes": [
+        { "key": "feature", "type": "string", "size": 32, "required": true },
+        { "key": "inputSnapshot", "type": "string", "size": 4000, "required": false },
+        { "key": "tierUsed", "type": "string", "size": 16, "required": true },
+        { "key": "output", "type": "string", "size": 4000, "required": false },
+        { "key": "latencyMs", "type": "integer", "required": false },
+        { "key": "relatedId", "type": "string", "size": 64, "required": false }
+      ],
+      "indexes": [{ "key": "idx_feature", "type": "key", "attributes": ["feature"] }]
+    },
+    {
+      "$id": "analytics_daily",
+      "$permissions": ["read(\"team:admin\")"],
+      "databaseId": "handygo",
+      "name": "analytics_daily",
+      "enabled": true,
+      "documentSecurity": false,
+      "attributes": [
+        { "key": "date", "type": "datetime", "required": true },
+        { "key": "totalBookings", "type": "integer", "required": false, "default": 0 },
+        { "key": "completed", "type": "integer", "required": false, "default": 0 },
+        { "key": "cancelled", "type": "integer", "required": false, "default": 0 },
+        { "key": "revenue", "type": "double", "required": false, "default": 0 },
+        { "key": "avgRating", "type": "double", "required": false, "default": 0 },
+        { "key": "demandByCategory", "type": "string", "size": 2000, "required": false },
+        { "key": "workerShortageAreas", "type": "string", "size": 2000, "required": false },
+        { "key": "cancellationReasons", "type": "string", "size": 2000, "required": false }
+      ],
+      "indexes": [{ "key": "idx_date", "type": "unique", "attributes": ["date"] }]
+    }
+  ],
+  "functions": [
+    {
+      "$id": "aiIntake",
+      "name": "aiIntake",
+      "runtime": "node-18.0",
+      "path": "functions/aiIntake",
+      "entrypoint": "src/main.js",
+      "execute": ["users"],
+      "events": [],
+      "schedule": "",
+      "timeout": 30
+    },
+    {
+      "$id": "aiChat",
+      "name": "aiChat",
+      "runtime": "node-18.0",
+      "path": "functions/aiChat",
+      "entrypoint": "src/main.js",
+      "execute": ["users"],
+      "events": [],
+      "schedule": "",
+      "timeout": 30
+    },
+    {
+      "$id": "aiTranslate",
+      "name": "aiTranslate",
+      "runtime": "node-18.0",
+      "path": "functions/aiTranslate",
+      "entrypoint": "src/main.js",
+      "execute": [],
+      "events": ["databases.handygo.collections.messages.documents.*.create"],
+      "schedule": "",
+      "timeout": 30
+    },
+    {
+      "$id": "recommendWorkers",
+      "name": "recommendWorkers",
+      "runtime": "node-18.0",
+      "path": "functions/recommendWorkers",
+      "entrypoint": "src/main.js",
+      "execute": ["users"],
+      "events": [],
+      "schedule": "",
+      "timeout": 15
+    },
+    {
+      "$id": "priceGuard",
+      "name": "priceGuard",
+      "runtime": "node-18.0",
+      "path": "functions/priceGuard",
+      "entrypoint": "src/main.js",
+      "execute": [],
+      "events": ["databases.handygo.collections.worker_offers.documents.*.create"],
+      "schedule": "",
+      "timeout": 15
+    },
+    {
+      "$id": "workerAssist",
+      "name": "workerAssist",
+      "runtime": "node-18.0",
+      "path": "functions/workerAssist",
+      "entrypoint": "src/main.js",
+      "execute": ["users"],
+      "events": [],
+      "schedule": "",
+      "timeout": 30
+    },
+    {
+      "$id": "routePlanner",
+      "name": "routePlanner",
+      "runtime": "node-18.0",
+      "path": "functions/routePlanner",
+      "entrypoint": "src/main.js",
+      "execute": ["users"],
+      "events": [],
+      "schedule": "",
+      "timeout": 15
+    },
+    {
+      "$id": "sosProcessor",
+      "name": "sosProcessor",
+      "runtime": "node-18.0",
+      "path": "functions/sosProcessor",
+      "entrypoint": "src/main.js",
+      "execute": [],
+      "events": ["databases.handygo.collections.sos_alerts.documents.*.create"],
+      "schedule": "",
+      "timeout": 20
+    },
+    {
+      "$id": "fraudAnalyzer",
+      "name": "fraudAnalyzer",
+      "runtime": "node-18.0",
+      "path": "functions/fraudAnalyzer",
+      "entrypoint": "src/main.js",
+      "execute": [],
+      "events": ["databases.handygo.collections.fraud_reports.documents.*.create"],
+      "schedule": "",
+      "timeout": 20
+    },
+    {
+      "$id": "scoreEngine",
+      "name": "scoreEngine",
+      "runtime": "node-18.0",
+      "path": "functions/scoreEngine",
+      "entrypoint": "src/main.js",
+      "execute": [],
+      "events": [],
+      "schedule": "0 3 * * *",
+      "timeout": 60
+    },
+    {
+      "$id": "analyticsRollup",
+      "name": "analyticsRollup",
+      "runtime": "node-18.0",
+      "path": "functions/analyticsRollup",
+      "entrypoint": "src/main.js",
+      "execute": [],
+      "events": [],
+      "schedule": "0 0 * * *",
+      "timeout": 60
+    },
+    {
+      "$id": "transitionBooking",
+      "name": "transitionBooking",
+      "runtime": "node-18.0",
+      "path": "functions/transitionBooking",
+      "entrypoint": "src/main.js",
+      "execute": ["users"],
+      "events": [],
+      "schedule": "",
+      "timeout": 15
+    }
+  ]
+}

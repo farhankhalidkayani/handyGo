@@ -1,0 +1,16 @@
+[
+  { "name": "Plumbing", "icon": "plumbing", "basePriceMin": 800, "basePriceMax": 2500, "avgDurationMins": 75,
+    "keywords": ["leak", "pipe", "tap", "nal", "paani", "drain"] },
+  { "name": "Electrical", "icon": "electrical", "basePriceMin": 700, "basePriceMax": 3000, "avgDurationMins": 60,
+    "keywords": ["wiring", "switch", "bijli", "current", "breaker", "socket"] },
+  { "name": "Carpentry", "icon": "carpentry", "basePriceMin": 1000, "basePriceMax": 3500, "avgDurationMins": 90,
+    "keywords": ["wood", "sofa", "door", "darwaza", "furniture", "leg"] },
+  { "name": "Cleaning", "icon": "cleaning", "basePriceMin": 1500, "basePriceMax": 5000, "avgDurationMins": 120,
+    "keywords": ["clean", "safai", "dusting", "wash"] },
+  { "name": "AC Repair", "icon": "ac_repair", "basePriceMin": 1500, "basePriceMax": 4000, "avgDurationMins": 90,
+    "keywords": ["ac", "cooling", "gas", "thanda", "compressor"] },
+  { "name": "Appliance Repair", "icon": "appliance_repair", "basePriceMin": 1000, "basePriceMax": 4000, "avgDurationMins": 80,
+    "keywords": ["fridge", "washing machine", "microwave", "kharab"] },
+  { "name": "Emergency Service", "icon": "emergency", "basePriceMin": 1000, "basePriceMax": 6000, "avgDurationMins": 60,
+    "keywords": ["urgent", "emergency", "foran", "jaldi"] }
+]

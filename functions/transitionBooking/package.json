@@ -1,0 +1,9 @@
+{
+  "name": "transitionBooking",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/main.js",
+  "dependencies": {
+    "node-appwrite": "^13.0.0"
+  }
+}

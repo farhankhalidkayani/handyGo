@@ -1,0 +1,18 @@
+{
+  "password": "Handygo@123",
+  "customers": [
+    { "name": "Ammar", "email": "customer@handygo.demo", "phone": "+923001234567", "language": "roman_ur",
+      "lat": 31.5204, "lng": 74.3587 }
+  ],
+  "workers": [
+    { "name": "Ali Electrician", "email": "worker@handygo.demo", "phone": "+923007654321", "language": "roman_ur",
+      "skills": ["Electrical"], "lat": 31.5225, "lng": 74.3550, "rating": 4.8, "jobsCompleted": 42 },
+    { "name": "Bilal Plumber", "email": "bilal@handygo.demo", "phone": "+923004445566", "language": "ur",
+      "skills": ["Plumbing"], "lat": 31.5180, "lng": 74.3620, "rating": 4.5, "jobsCompleted": 30 },
+    { "name": "Sana AC Tech", "email": "sana@handygo.demo", "phone": "+923009998877", "language": "en",
+      "skills": ["AC Repair", "Appliance Repair"], "lat": 31.5260, "lng": 74.3500, "rating": 4.9, "jobsCompleted": 55 },
+    { "name": "Hamza Carpenter", "email": "hamza@handygo.demo", "phone": "+923002223344", "language": "roman_ur",
+      "skills": ["Carpentry"], "lat": 31.5150, "lng": 74.3650, "rating": 4.2, "jobsCompleted": 18 }
+  ],
+  "admin": { "name": "HandyGo Admin", "email": "admin@handygo.demo" }
+}
