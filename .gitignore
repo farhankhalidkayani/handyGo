@@ -122,6 +122,7 @@ functions/*/src/lib/
 functions/*/node_modules/
 node_modules/
 .appwrite/
+.appwrite-deploy/
 
 # Env files
 .env

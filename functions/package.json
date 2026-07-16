@@ -1,0 +1,14 @@
+{
+  "name": "handygo-functions-tooling",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Deps for build.js/deploy.js only — each function/<name>/package.json is deployed independently.",
+  "scripts": {
+    "build": "node build.js",
+    "deploy": "node deploy.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "node-appwrite": "^13.0.0"
+  }
+}
