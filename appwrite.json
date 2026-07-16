@@ -13,10 +13,10 @@
     },
     "functions": [
         {
-            "$id": "aiIntake",
-            "name": "aiIntake",
+            "$id": "aiRouter",
+            "name": "aiRouter",
             "runtime": "node-18.0",
-            "path": "functions/aiIntake",
+            "path": "functions/aiRouter",
             "entrypoint": "src/main.js",
             "execute": [
                 "users"
@@ -26,143 +26,20 @@
             "timeout": 30
         },
         {
-            "$id": "aiChat",
-            "name": "aiChat",
+            "$id": "eventRouter",
+            "name": "eventRouter",
             "runtime": "node-18.0",
-            "path": "functions/aiChat",
-            "entrypoint": "src/main.js",
-            "execute": [
-                "users"
-            ],
-            "events": [],
-            "schedule": "",
-            "timeout": 30
-        },
-        {
-            "$id": "aiTranslate",
-            "name": "aiTranslate",
-            "runtime": "node-18.0",
-            "path": "functions/aiTranslate",
+            "path": "functions/eventRouter",
             "entrypoint": "src/main.js",
             "execute": [],
             "events": [
-                "databases.handygo.collections.messages.documents.*.create"
-            ],
-            "schedule": "",
-            "timeout": 30
-        },
-        {
-            "$id": "recommendWorkers",
-            "name": "recommendWorkers",
-            "runtime": "node-18.0",
-            "path": "functions/recommendWorkers",
-            "entrypoint": "src/main.js",
-            "execute": [
-                "users"
-            ],
-            "events": [],
-            "schedule": "",
-            "timeout": 15
-        },
-        {
-            "$id": "priceGuard",
-            "name": "priceGuard",
-            "runtime": "node-18.0",
-            "path": "functions/priceGuard",
-            "entrypoint": "src/main.js",
-            "execute": [],
-            "events": [
-                "databases.handygo.collections.worker_offers.documents.*.create"
-            ],
-            "schedule": "",
-            "timeout": 15
-        },
-        {
-            "$id": "workerAssist",
-            "name": "workerAssist",
-            "runtime": "node-18.0",
-            "path": "functions/workerAssist",
-            "entrypoint": "src/main.js",
-            "execute": [
-                "users"
-            ],
-            "events": [],
-            "schedule": "",
-            "timeout": 30
-        },
-        {
-            "$id": "routePlanner",
-            "name": "routePlanner",
-            "runtime": "node-18.0",
-            "path": "functions/routePlanner",
-            "entrypoint": "src/main.js",
-            "execute": [
-                "users"
-            ],
-            "events": [],
-            "schedule": "",
-            "timeout": 15
-        },
-        {
-            "$id": "sosProcessor",
-            "name": "sosProcessor",
-            "runtime": "node-18.0",
-            "path": "functions/sosProcessor",
-            "entrypoint": "src/main.js",
-            "execute": [],
-            "events": [
-                "databases.handygo.collections.sos_alerts.documents.*.create"
-            ],
-            "schedule": "",
-            "timeout": 20
-        },
-        {
-            "$id": "fraudAnalyzer",
-            "name": "fraudAnalyzer",
-            "runtime": "node-18.0",
-            "path": "functions/fraudAnalyzer",
-            "entrypoint": "src/main.js",
-            "execute": [],
-            "events": [
+                "databases.handygo.collections.messages.documents.*.create",
+                "databases.handygo.collections.worker_offers.documents.*.create",
+                "databases.handygo.collections.sos_alerts.documents.*.create",
                 "databases.handygo.collections.fraud_reports.documents.*.create"
             ],
-            "schedule": "",
-            "timeout": 20
-        },
-        {
-            "$id": "scoreEngine",
-            "name": "scoreEngine",
-            "runtime": "node-18.0",
-            "path": "functions/scoreEngine",
-            "entrypoint": "src/main.js",
-            "execute": [],
-            "events": [],
-            "schedule": "0 3 * * *",
-            "timeout": 60
-        },
-        {
-            "$id": "analyticsRollup",
-            "name": "analyticsRollup",
-            "runtime": "node-18.0",
-            "path": "functions/analyticsRollup",
-            "entrypoint": "src/main.js",
-            "execute": [],
-            "events": [],
             "schedule": "0 0 * * *",
-            "timeout": 60
-        },
-        {
-            "$id": "transitionBooking",
-            "name": "transitionBooking",
-            "runtime": "node-18.0",
-            "path": "functions/transitionBooking",
-            "entrypoint": "src/main.js",
-            "execute": [
-                "users"
-            ],
-            "events": [],
-            "schedule": "",
-            "timeout": 15
+            "timeout": 90
         }
     ],
     "databases": [

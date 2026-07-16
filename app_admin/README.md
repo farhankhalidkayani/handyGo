@@ -17,7 +17,7 @@ Run with `flutter run -d chrome`.
   card with Approve/Reject/Modify; admin action is the only thing that writes `adminDecision`
 - SOS Control Center (red banner, timeline, actions) — reacts to `sos_alerts` realtime events
 - AI insights: fraud flags, chat-scan flags, risk/performance scores, demand forecast (from
-  `analytics_daily`, populated by the scheduled `analyticsRollup` Function)
+  `analytics_daily`, populated by `eventRouter`'s daily scheduled job)
 
 Every AI-produced decision-shaped output must render as a recommendation card with
 Approve/Reject/Modify — AI never writes a final `adminDecision` (plan §8.3 governance rule).
