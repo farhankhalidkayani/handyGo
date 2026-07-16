@@ -10,6 +10,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const sdk = require('node-appwrite');
+const { InputFile } = require('node-appwrite/file');
 
 const ENDPOINT = process.env.APPWRITE_ENDPOINT || 'https://cloud.appwrite.io/v1';
 const PROJECT = process.env.APPWRITE_PROJECT;
@@ -80,7 +81,7 @@ async function deployFunction(fn) {
 
   const deployment = await functions.createDeployment(
     fn.$id,
-    sdk.InputFile.fromPath(tarPath, `${fn.$id}.tar.gz`),
+    InputFile.fromPath(tarPath, `${fn.$id}.tar.gz`),
     true, // activate immediately
     fn.entrypoint,
     'npm install'
