@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // seed/seed.js — populates service_categories and demo accounts (§14.1) into an already
-// provisioned Appwrite project (run `appwrite push collections` first, see docs/SETUP.md).
+// provisioned Appwrite project (run `node seed/provision.js` first).
 // Usage: node seed/seed.js
-require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const sdk = require('node-appwrite');
 
 const ENDPOINT = process.env.APPWRITE_ENDPOINT || 'https://cloud.appwrite.io/v1';
@@ -27,16 +27,22 @@ const demo = JSON.parse(fs.readFileSync(path.join(__dirname, 'demo_accounts.json
 async function seedCategories() {
   console.log(`Seeding ${categories.length} service_categories...`);
   for (const cat of categories) {
-    await databases.createDocument(DB_ID, 'service_categories', sdk.ID.unique(), cat).catch((e) => {
-      if (e.code !== 409) console.error(`  ${cat.name}: ${e.message}`);
-    });
-    console.log(`  + ${cat.name}`);
+    await databases.createDocument(DB_ID, 'service_categories', sdk.ID.unique(), cat).then(
+      () => console.log(`  + ${cat.name}`),
+      (e) => {
+        if (e.code === 409) console.log(`  = ${cat.name} (already exists)`);
+        else console.error(`  ! ${cat.name}: ${e.message}`);
+      }
+    );
   }
 }
 
 async function createDemoUser({ name, email, phone, role, language }) {
+  // Auth user is created WITHOUT phone: this Appwrite project's phone-number validation
+  // rejects +92 (Pakistan) numbers (a Console-level restriction, not something this script
+  // controls). The display phone number below is a plain string field with no such check.
   const authUser = await users
-    .create(sdk.ID.unique(), email, phone, demo.password, name)
+    .create(sdk.ID.unique(), email, undefined, demo.password, name)
     .catch(async (e) => {
       if (e.code === 409) {
         const list = await users.list([sdk.Query.equal('email', email)]);
