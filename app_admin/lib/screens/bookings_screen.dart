@@ -4,10 +4,12 @@ import 'package:handygo_shared/handygo_shared.dart';
 
 import '../services/app_services.dart';
 
+const _terminalStatuses = [BookingStatus.completed, BookingStatus.cancelled, BookingStatus.refunded];
+
 /// Plan §12 Admin Panel checklist: "Booking management (full detail + audit history +
-/// actions)". This is the read-only live list — full detail/audit-history/actions (cancel,
-/// force-refund, etc.) are a follow-up; this proves realtime sync across all 3 apps from the
-/// admin side (§6.1: Admin subscribes to ALL collections).
+/// actions)" + §10.4 dispute resolution (raise a dispute off a non-terminal booking, then
+/// resolve it to refunded/completed — both legal `disputed` exits per transitionBooking.js's
+/// guard table).
 class BookingsBody extends StatefulWidget {
   const BookingsBody({super.key});
 
@@ -19,11 +21,16 @@ class _BookingsBodyState extends State<BookingsBody> {
   final List<Booking> _bookings = [];
   RealtimeSubscription? _subscription;
   bool _loading = true;
+  String? _error;
+  String? _adminAuthId;
 
   @override
   void initState() {
     super.initState();
     _load();
+    AppServices.auth.getCurrentUser().then((u) {
+      if (mounted) setState(() => _adminAuthId = u?.$id);
+    });
     _subscription = AppServices.bookings.subscribeToBookings();
     _subscription!.stream.listen((event) {
       final payload = event.payload;
@@ -50,6 +57,33 @@ class _BookingsBodyState extends State<BookingsBody> {
     });
   }
 
+  Future<void> _transition(Booking booking, BookingStatus next, {String? confirmMessage}) async {
+    if (confirmMessage != null) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(confirmMessage),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('No')),
+            FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Yes')),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+    setState(() => _error = null);
+    try {
+      await AppServices.bookings.transition(
+        bookingId: booking.id,
+        nextStatus: next,
+        changedByRole: 'admin',
+        changedById: _adminAuthId ?? 'admin',
+      );
+    } catch (e) {
+      setState(() => _error = 'Action failed: $e');
+    }
+  }
+
   @override
   void dispose() {
     _subscription?.close();
@@ -60,17 +94,67 @@ class _BookingsBodyState extends State<BookingsBody> {
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_bookings.isEmpty) return const Center(child: Text('No bookings yet.'));
-    return ListView.builder(
-      itemCount: _bookings.length,
-      itemBuilder: (context, i) {
-        final b = _bookings[i];
-        return ListTile(
-          title: Text(b.problemText),
-          subtitle: Text('${b.addressText}\n${b.status.wire}'),
-          isThreeLine: true,
-          trailing: b.finalQuote != null ? Text('Rs. ${b.finalQuote!.toStringAsFixed(0)}') : null,
-        );
-      },
+    return Column(
+      children: [
+        if (_error != null)
+          Padding(padding: const EdgeInsets.all(8), child: Text(_error!, style: const TextStyle(color: Colors.red))),
+        Expanded(
+          child: ListView.builder(
+            itemCount: _bookings.length,
+            itemBuilder: (context, i) {
+              final b = _bookings[i];
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(b.problemText),
+                      const SizedBox(height: 4),
+                      Text('${b.addressText}\n${b.status.wire}'),
+                      if (b.finalQuote != null) Text('Rs. ${b.finalQuote!.toStringAsFixed(0)}'),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          if (b.status == BookingStatus.disputed) ...[
+                            FilledButton(
+                              onPressed: () => _transition(
+                                b,
+                                BookingStatus.refunded,
+                                confirmMessage: 'Refund this booking?',
+                              ),
+                              child: const Text('Refund'),
+                            ),
+                            OutlinedButton(
+                              onPressed: () => _transition(
+                                b,
+                                BookingStatus.completed,
+                                confirmMessage: 'Mark completed (no refund)?',
+                              ),
+                              child: const Text('Mark completed'),
+                            ),
+                          ] else if (!_terminalStatuses.contains(b.status))
+                            OutlinedButton(
+                              style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
+                              onPressed: () => _transition(
+                                b,
+                                BookingStatus.disputed,
+                                confirmMessage: 'Raise a dispute on this booking?',
+                              ),
+                              child: const Text('Raise dispute'),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
