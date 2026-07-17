@@ -76,10 +76,12 @@ third window as admin to watch bookings appear live.
 
 ## 2b. AI-assisted intake & chat
 
-Currently running on the **fallback tier only** — Ollama on localhost isn't reachable from
-Appwrite Cloud Functions, and no cloud LLM key (Groq/Gemini) is configured yet. Expect rules-
-based category matching and canned chat replies until that's wired in; re-run 2b.3/2b.6 once a
-real LLM key is set to confirm the LLM tier actually engages (`tierUsed: "llm"` in `ai_logs`).
+**Update:** Groq (`llama-3.1-8b-instant`) is now configured as tier-1 on both Functions —
+confirmed live via `ai_logs` (`tierUsed: "llm"`, ~300ms–1s latency) for both `aiIntake` and
+`aiChat`. One quality note found during that verification: for an ambiguous Roman Urdu prompt,
+the model returned the free-text "solution" field in Devanagari/Hindi script rather than Roman
+Urdu — category detection and price band were still correct. Worth spot-checking across more
+Urdu/Roman Urdu phrasings (2b.2) rather than assuming it's fixed.
 
 | # | Test | App | Steps | Expected | Status |
 |---|---|---|---|---|---|
@@ -113,6 +115,7 @@ schema or permission change.
 ## 4. Known gaps (not yet built — don't file these as bugs)
 
 Additional-charge approval mid-job, live map/ETA rendering, cancel/dispute flows, SOS, photo/
-voice problem intake (text-only AI intake is done — §2b), workerAssist quote suggestions,
-message translation, and a configured cloud LLM key (currently fallback-only — §0.6/§2b) —
-these are Phase 3+ per the plan's phase ordering (§13).
+voice problem intake (text-only AI intake is done — §2b), workerAssist quote suggestions, and
+message translation — these are Phase 3+ per the plan's phase ordering (§13). Cloud LLM (Groq)
+is now configured and confirmed live (§2b) — §0.6's fallback-ladder behavior still applies if
+Groq itself is ever unreachable/rate-limited, just isn't the current normal path anymore.

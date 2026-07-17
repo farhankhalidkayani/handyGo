@@ -74,19 +74,26 @@ node deploy.js        # creates/updates both functions, uploads code, sets env v
 node status.js        # check build status of the latest deployment
 ```
 
-## 4. AI layer (local, $0)
+## 4. AI layer
+
+**Currently configured: Groq free tier (`llama-3.1-8b-instant`) as tier 1** — confirmed live via
+`ai_logs` (`tierUsed: "llm"`, ~300ms–1s latency) for both `aiIntake` and `aiChat`. Ollama on a
+laptop isn't reachable from Appwrite Cloud Functions (confirmed in testing), so Groq's free API
+is the practical zero-cost option for actually getting real LLM output on Cloud, not just the
+rules/canned fallback (§4.3). One quality note found in testing: for an ambiguous Roman Urdu
+prompt, the model returned free-text output in Devanagari/Hindi script rather than Roman Urdu —
+worth spot-checking further (see `docs/TEST_CASES.md` §2b).
 
 ```bash
-ollama pull qwen2.5:7b
-ollama serve                 # exposes http://localhost:11434 — functions call this as tier 1
+# functions/sync_llm_vars.js — deploy.js only ever adds missing Function env vars, never
+# updates/removes existing ones, so switching tiers needs this one-off sync script.
+cd functions && node sync_llm_vars.js && node build.js && node deploy.js
 ```
 
-**Ollama on your laptop is not reachable from Appwrite Cloud** — confirmed in testing; both
-functions correctly fall back to rules/canned responses per the fallback ladder (§4.3), but you
-won't get real LLM output this way. For actual LLM responses on Appwrite Cloud, set `GROQ_API_KEY`
-in `.env` and unset `OLLAMA_URL` so `functions/lib/llm.js` uses Groq's free tier as tier 1 instead
-(same code path, see plan §4.4). Self-hosting Appwrite via Docker (see plan §3) is the other option
-if you want Functions running next to a local Ollama instance.
+To self-host Ollama instead (keeps everything fully local, no external API): self-host Appwrite
+via Docker (see plan §3) so Functions run next to a local Ollama instance, `ollama pull
+qwen2.5:7b && ollama serve`, then set `OLLAMA_URL`/unset `GROQ_API_KEY` and re-run the sync
+script above (same code path in `functions/lib/llm.js` either way).
 
 ## 5. Seed demo data
 
