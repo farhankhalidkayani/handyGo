@@ -232,14 +232,104 @@ afterward).
 
 ---
 
+## 2i. Admin analytics dashboard
+
+Verified live: `scoreEngine`/`analyticsRollup` invoked directly (bypassing the inability to
+spoof the `x-appwrite-trigger: schedule` header) — confirmed real `worker_profiles.
+performanceScore` updates and a real `analytics_daily` document.
+
+| # | Test | App | Steps | Expected | Status |
+|---|---|---|---|---|---|
+| 2i.1 | Stat cards render | Admin | Analytics tab | Today's totalBookings/completed/cancelled/revenue/avgRating show as cards | 🔲 |
+| 2i.2 | Demand-by-category bars | Admin | Analytics tab, after at least one booking created today | A bar per category with today's booking count, category id resolved to its name | 🔲 |
+| 2i.3 | No data yet | Admin | Analytics tab before the daily rollup has ever run | Friendly "no analytics yet" message instead of a crash/blank screen | 🔲 |
+| 2i.4 | Worker-shortage areas honestly flagged as unbuilt | — | Analytics tab | Section is visibly present but says geographic clustering isn't implemented — not silently hidden | ✅ (code review) |
+
+---
+
+## 2j. Offer comparison (C6: best price / fastest / top rated / best match)
+
+Verified live: `recommendWorkers` with `mode: 'compareOffers'` against a bookingId with no
+offers returns `{offers: []}` cleanly (200, not an error).
+
+| # | Test | App | Steps | Expected | Status |
+|---|---|---|---|---|---|
+| 2j.1 | All four tags appear | Customer | Offers screen, once 2+ workers have sent offers | Each offer card shows whichever of Best price/Fastest/Top rated/Best match tags apply; more than one tag can land on the same offer | 🔲 |
+| 2j.2 | Best match persists across viewers | — | Call `compareOffers` twice for the same booking | `worker_offers.isBestMatch` is `true` on the same winning offer both times (idempotent) | 🔲 |
+| 2j.3 | Comparison never blocks accepting an offer | Customer | Accept an offer while the `compareOffers` call is still in flight or fails | "Accept" still works — tag computation is best-effort, not a gate | ✅ (code review — try/catch around `_refreshComparison`) |
+
+---
+
+## 2k. Live ETA + map (worker + customer)
+
+Verified via code path: `routePlanner`'s OSRM call falls back to a straight-line estimate if
+OSRM is unreachable (pre-existing, unit-tested in an earlier session) — this section covers
+the newly wired UI consuming it.
+
+| # | Test | App | Steps | Expected | Status |
+|---|---|---|---|---|---|
+| 2k.1 | ETA shows for an on-the-way job | Worker | Active Job screen, booking at `confirmed`/`worker_on_the_way` → grant location permission | Mini-map with worker (blue)/job (red) markers, "ETA: ~N mins" text | 🔲 |
+| 2k.2 | ETA refresh doesn't block status changes | Worker | Tap "Refresh" then immediately advance the job status | Status transition succeeds regardless of whether the ETA refresh finished | 🔲 |
+| 2k.3 | Location denial doesn't crash the screen | Worker | Deny the browser's location permission prompt | Screen still renders normally, just without the map/ETA (no error banner spam) | 🔲 |
+| 2k.4 | Customer sees worker's last-known position | Customer | Tracking screen, booking at `confirmed`/`worker_on_the_way`, after the worker has refreshed at least once | Mini-map appears with the worker's last-pinged position within ~15s (poll interval) | 🔲 |
+| 2k.5 | No live tracking outside the on-the-way window | Customer/Worker | Check any other booking status | No polling/map — this is a last-known-ping, not continuous tracking, and is explicitly scoped that way in code comments | ✅ (code review) |
+
+---
+
+## 2l. Voice note attachment
+
+| # | Test | App | Steps | Expected | Status |
+|---|---|---|---|---|---|
+| 2l.1 | Record + attach | Customer | AI intake screen, after getting an estimate → "Record a voice note" → speak → "Stop recording" | Button label switches to "Voice note attached — tap to re-record"; upload happens in the background | 🔲 |
+| 2l.2 | Voice note persists on the booking | Customer | Complete booking creation after 2l.1 | `bookings.voiceNoteUrl` contains the uploaded file id | 🔲 |
+| 2l.3 | Microphone denial doesn't block booking | Customer | Deny the microphone permission prompt, then book without a voice note | Booking still creates normally — attachment only, no transcription, entirely optional | 🔲 |
+| 2l.4 | Re-recording replaces, doesn't stack | Customer | Record once, stop, then record again and stop | Only the second recording's file id ends up in `voiceNoteUrl` — no duplicate attachments | ✅ (code review — `_voiceNoteId` is overwritten, not appended) |
+
+---
+
+## 2m. SOS Control Center: live location, pause/block payment/cancel booking
+
+Verified live end-to-end via direct handler invocation: pause blocks all further transitions
+except cancel; cancel succeeds even on a paused booking; blockPayment returns 409 on a
+`completed` attempt and unblockPayment clears it (all against real throwaway bookings/alerts,
+cleaned up after).
+
+| # | Test | App | Steps | Expected | Status |
+|---|---|---|---|---|---|
+| 2m.1 | Open live location | Admin | SOS tab → any alert → "Open live location" | Dialog with a map centered on the alert's own captured lat/lng; friendly error if the alert has no location | 🔲 |
+| 2m.2 | Pause a booking | Admin | SOS tab → alert with a bookingId → "Pause booking" | `bookings.paused` → `true`; worker/customer screens show a red "paused by an admin" banner | ✅ (scripted) / 🔲 (UI) |
+| 2m.3 | Paused booking blocks progress | Worker | Try to advance status (e.g. "I'm on the way") on a paused booking | Transition rejected (409) with a clear error, surfaced as "Could not update status: ..." | ✅ (scripted) |
+| 2m.4 | Paused booking can still be cancelled | Worker/Customer | Cancel a paused booking | Cancellation succeeds — pause blocks progress, not exit | ✅ (scripted) |
+| 2m.5 | Resume a booking | Admin | SOS tab → "Resume booking" | `bookings.paused` → `false`; normal transitions work again | ✅ (scripted, via unpause) |
+| 2m.6 | Block payment | Admin | SOS tab → "Block payment" | `bookings.paymentBlocked` → `true`; a subsequent transition to `completed` is rejected (409) | ✅ (scripted) |
+| 2m.7 | Unblock payment | Admin | SOS tab → "Unblock payment" | `bookings.paymentBlocked` → `false`; `completed` transition then succeeds | ✅ (scripted) / 🔲 (UI) |
+| 2m.8 | Cancel from SOS goes through the real guard | — | Inspect `updateSosStatus.js`'s `cancel` bookingAction | Routes through `transitionBooking` (not a raw `updateDocument`), so it still respects the state machine and still writes a `booking_status_history` entry | ✅ (code review) |
+
+---
+
+## 2n. Dispute resolution
+
+Verified live via direct handler invocation: `in_progress` → `disputed` → `refunded` both
+succeed against a real throwaway booking (cleaned up after).
+
+| # | Test | App | Steps | Expected | Status |
+|---|---|---|---|---|---|
+| 2n.1 | Raise a dispute | Admin | Bookings tab → any non-terminal booking → "Raise dispute" → confirm | Booking transitions to `disputed`; "Raise dispute" button replaced by Refund/Mark completed | 🔲 |
+| 2n.2 | Resolve via refund | Admin | Bookings tab → disputed booking → "Refund" → confirm | Booking transitions to `refunded` (terminal) | ✅ (scripted) |
+| 2n.3 | Resolve via mark completed | Admin | Bookings tab → disputed booking → "Mark completed" → confirm | Booking transitions to `completed` (terminal); commission/transaction logic still runs the same as any other completion | 🔲 |
+| 2n.4 | No dispute option on terminal bookings | Admin | Check a `completed`/`cancelled`/`refunded` booking | Neither "Raise dispute" nor the disputed-only buttons show | ✅ (code review) |
+
+---
+
 ## 4. Known gaps (not yet built — don't file these as bugs)
 
-Live map/ETA rendering, dispute resolution flow (distinct from a plain cancel, which is built —
-§2g), voice problem intake / auto image-captioning into the AI classifier (photo attachment
-itself is built — §2h), and the rest of the SOS Control Center action set (Open Live Location,
-Pause Booking, Block Payment, Cancel — Acknowledge/In progress/Mark safe/Close/Call/Suspend are
-built, §2d/§2h) — these are Phase 3+ per the plan's phase ordering (§13). Additional-charge
-approval and booking cancellation are now
-built (§2g). Fraud reporting is now built (§2e). Cloud LLM (Groq) is now configured and
-confirmed live (§2b) — §0.6's fallback-ladder behavior still applies if Groq
-itself is ever unreachable/rate-limited, just isn't the current normal path anymore.
+Auto image-captioning into the AI classifier and voice-note transcription (both photo and
+voice attachment themselves are built — §2h/§2l) remain out of scope, per the plan's own
+tiered-AI-cost notes (a vision/STT model is a separate cost tier). Worker-shortage-area
+clustering on the analytics dashboard is stubbed but not implemented (§2i.4) — needs
+geographic clustering of demand vs. online worker coverage. `recommendWorkers`'s original
+C5 mode (ranking nearby workers for a customer, distinct from the now-built C6 offer
+comparison — §2j) is implemented server-side but not yet called from any UI. Cloud LLM
+(Groq) is configured and confirmed live (§2b) — §0.6's fallback-ladder behavior still
+applies if Groq itself is ever unreachable/rate-limited, just isn't the current normal path
+anymore.

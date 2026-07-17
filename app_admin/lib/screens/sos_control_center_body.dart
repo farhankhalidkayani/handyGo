@@ -288,6 +288,10 @@ class _SosControlCenterBodyState extends State<SosControlCenterBody> {
                                 child: const Text('Block payment'),
                               ),
                               OutlinedButton(
+                                onPressed: () => _bookingAction(a, 'unblockPayment'),
+                                child: const Text('Unblock payment'),
+                              ),
+                              OutlinedButton(
                                 style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
                                 onPressed: () => _bookingAction(
                                   a,
