@@ -1,0 +1,118 @@
+# Handy Go — Test Cases (Phases 0–2 + AI intake/chat)
+
+Living checklist of what to verify to confirm the app actually works. Organized by what's
+built so far: backend/schema (Phase 0), auth/profiles (Phase 1), core booking flow (Phase 2),
+AI-assisted intake/chat (early Phase 4 slice). Update this file as new phases land — add
+sections, don't rewrite history.
+
+**Legend:** ✅ = covered by an automated script in this repo (`seed/e2e_test.js` or similar) and
+already verified passing · 🔲 = needs manual click-through (UI not exercised by any script).
+
+---
+
+## 0. Backend / infrastructure
+
+| # | Test | Steps | Expected | Status |
+|---|---|---|---|---|
+| 0.1 | Schema provisioned | `node seed/provision.js` | All 15 collections exist with correct attributes/indexes; safe to re-run (idempotent) | ✅ |
+| 0.2 | Demo data seeded | `node seed/seed.js` | 7 categories, 1 customer, 4 workers, 1 admin created; re-running doesn't duplicate categories (unique index) | ✅ |
+| 0.3 | Functions deployed | `node functions/status.js` | `aiRouter` and `eventRouter` both show `status=ready` | ✅ |
+| 0.4 | aiRouter reachable | `node seed/e2e_test.js` step 2 | Returns 200, not 401/404 | ✅ |
+| 0.5 | eventRouter fires on DB events | Create a `fraud_reports` document directly | `aiSummary`/`aiRecommendation` populate within a few seconds, `status` → `investigating` | ✅ (manually verified earlier this session) |
+| 0.6 | AI fallback ladder | Any aiRouter/eventRouter feature that calls `askLLM`, with `OLLAMA_URL` unreachable (current state — Cloud Functions can't reach localhost) | Feature still returns a valid response using the rules/canned fallback, `tierUsed: "fallback"`, never a 500 | ✅ |
+
+---
+
+## 1. Auth & profiles (Phase 1)
+
+**Note:** seeded accounts use `@handygo.demo` — no real inbox. Use a **real email address**
+for manual testing; a fresh Appwrite Auth user is created automatically on first OTP request.
+
+| # | Test | App | Steps | Expected | Status |
+|---|---|---|---|---|---|
+| 1.1 | New customer signup | Customer | Splash → pick language → allow/skip location → enter real email → "Send code" → check inbox → enter code → "Verify" | Lands on Profile Setup (no `users` doc yet for this email) | 🔲 |
+| 1.2 | Customer profile setup | Customer | Fill name + phone → Continue | Lands on Home with "Welcome, `<name>`"; a `users` + `customer_profiles` document now exists in Appwrite console | 🔲 |
+| 1.3 | Returning customer | Customer | Fully close/reload the app after 1.2 | Splash skips straight to Home (session persisted, profile found) — no login screen shown | 🔲 |
+| 1.4 | Logout | Customer/Worker/Admin | Tap logout icon | Returns to language-select (customer/worker) or login (admin); reopening app shows login again, not Home | 🔲 |
+| 1.5 | New worker signup | Worker | Same OTP flow as 1.1, different email | Lands on Worker Registration (no `users` doc yet) | 🔲 |
+| 1.6 | Worker registration | Worker | Fill name/phone/experience, select ≥1 skill, submit | Lands on "Under review" screen; `worker_profiles.verificationStatus == "under_review"` | 🔲 |
+| 1.7 | Worker registration validation | Worker | Submit registration with 0 skills selected | Inline error "Select at least one skill", not submitted | 🔲 |
+| 1.8 | Worker blocked until approved | Worker | Log out, log back in as the still-under-review worker from 1.6 | Still shows "Under review", not Dashboard | 🔲 |
+| 1.9 | Admin approves worker | Admin | Log in with a `role: admin` account → Verifications tab → find the worker from 1.6 → Approve | Worker disappears from the queue | 🔲 |
+| 1.10 | Worker unlocked after approval | Worker | Log out and back in as the worker approved in 1.9 | Now lands on Dashboard, not "Under review" | 🔲 |
+| 1.11 | Admin reject path | Admin | Approve/reject a different test worker → Reject | Worker's `verificationStatus` → `rejected`; that worker's app shows the "not approved" message on next login | 🔲 |
+| 1.12 | Non-admin blocked from Admin Panel | Admin | Log in to the Admin app with a customer or worker email | Shows "This account does not have admin access" screen, not the dashboard | 🔲 |
+| 1.13 | Worker toggles availability | Worker | On Dashboard, flip the "Online" switch | Switch updates immediately; `worker_profiles.availability` flips between `online`/`offline` in Appwrite console | 🔲 (note: seeded demo workers currently lack this permission — see README; use a freshly-registered worker) |
+
+---
+
+## 2. Core booking flow (Phase 2)
+
+Best tested with **two browser windows side by side**: one logged in as a customer, one as a
+worker (use two different real emails, or one real + demo account role-swapped). Optionally a
+third window as admin to watch bookings appear live.
+
+| # | Test | App | Steps | Expected | Status |
+|---|---|---|---|---|---|
+| 2.1 | Create booking (manual path) | Customer | Home → "Pick a category manually" → pick category, enter problem + address → "Find workers" | Navigates to Offers screen; a new `bookings` document exists with `status: searching_workers`, `detectedByAI: false` | ✅ (scripted) / 🔲 (UI) |
+| 2.2 | Booking validation | Customer | Try "Find workers" with empty description or address | Inline validation errors, not submitted | 🔲 |
+| 2.3 | Worker sees the open job | Worker | Go online (1.13) with a skill matching the booking's category → Dashboard | The booking from 2.1 appears in "Open jobs matching your skills" | 🔲 |
+| 2.4 | Worker sends offer | Worker | Tap "Offer" on the job → enter quote + ETA → Send | Returns to Dashboard; a `worker_offers` document exists with `status: sent` | 🔲 |
+| 2.5 | Offer appears live (realtime) | Customer | Watch the Offers screen without refreshing while 2.4 happens in the other window | Offer appears within ~1-2s with no manual refresh — proves Realtime works | 🔲 |
+| 2.6 | Multiple offers / tags | Worker ×2, Customer | Send 2+ offers with different quotes/ETAs from two worker accounts | Customer's Offers screen tags the cheapest "Best price" and fastest-ETA one "Fastest" | 🔲 |
+| 2.7 | Accept an offer | Customer | Tap "Accept" on one offer | Navigates to Tracking screen; that offer → `accepted`, all other offers on this booking → `rejected`; `bookings.workerId`/`finalQuote`/`status` (`worker_selected`) update | ✅ (scripted) / 🔲 (UI) |
+| 2.8 | Worker sees acceptance live | Worker | Watch Dashboard without refreshing while 2.7 happens | Active job card appears within ~1-2s | 🔲 |
+| 2.9 | Worker confirms job | Worker | Open active job → "Confirm job" | Status → `confirmed`; customer's Tracking screen updates live to "Worker confirmed the job" | 🔲 |
+| 2.10 | Worker en route / arrived | Worker | "I'm on the way" → "I've arrived" | Status progresses `worker_on_the_way` → `worker_arrived`; customer sees each update live | 🔲 |
+| 2.11 | OTP gate — wrong code | Worker | At `worker_arrived`, enter a wrong 4-digit code → "Start service" | Rejected with an error, status stays `worker_arrived` | ✅ (scripted) / 🔲 (UI) |
+| 2.12 | OTP gate — correct code | Worker | Read the OTP customer sees on their Tracking screen, enter it correctly | Status → `service_started` then auto → `in_progress` | ✅ (scripted) / 🔲 (UI) |
+| 2.13 | Worker marks job done | Worker | On active job, "Mark job as done" | Status → `completion_requested`; customer's Tracking screen shows "Confirm & pay (COD)" button | 🔲 |
+| 2.14 | Customer confirms & pays | Customer | Tap "Confirm & pay (COD)" | Status → `payment_pending` → `completed`; a `transactions` document is auto-created (`method: cod`, `status: paid`, commission ≈15% of total) | ✅ (scripted) / 🔲 (UI) |
+| 2.15 | Rating flow | Customer | After 2.14, navigate to Rating screen (or reopen Home → tap the "Rate your last service" card) | Star picker + review box; Submit updates `bookings.ratingGiven`/`reviewText` and recomputes the worker's `worker_profiles.rating` average | ✅ (scripted) / 🔲 (UI) |
+| 2.16 | Home reflects booking state | Customer | Return to Home after 2.15 | No more "active booking"/"rate" card shown — booking is fully closed out | 🔲 |
+| 2.17 | Admin sees bookings live | Admin | Bookings tab, open before/during 2.1–2.14 | Booking appears and its status line updates live at each step, with no page refresh | 🔲 |
+
+---
+
+## 2b. AI-assisted intake & chat
+
+Currently running on the **fallback tier only** — Ollama on localhost isn't reachable from
+Appwrite Cloud Functions, and no cloud LLM key (Groq/Gemini) is configured yet. Expect rules-
+based category matching and canned chat replies until that's wired in; re-run 2b.3/2b.6 once a
+real LLM key is set to confirm the LLM tier actually engages (`tierUsed: "llm"` in `ai_logs`).
+
+| # | Test | App | Steps | Expected | Status |
+|---|---|---|---|---|---|
+| 2b.1 | AI intake — clear match | Customer | Home → "Request a service" (default AI path) → type a problem with an obvious keyword (e.g. "AC gas leak, not cooling") → "Get AI estimate" | Estimate card shows the right category (AC Repair) with a price range, duration, urgency, and confidence ≥ 0.7 (rules tier matched, no LLM needed) | 🔲 |
+| 2b.2 | AI intake — ambiguous / Roman Urdu | Customer | Type a vague or Roman Urdu description with no obvious keyword match | Still returns *some* category + price band (never blank) — confidence may be lower since it fell to the LLM tier or the last-resort default | 🔲 |
+| 2b.3 | AI intake — override category | Customer | After getting an estimate, change the category dropdown to something else → "Book service" | Booking is created with the manually-picked category; `bookings.detectedByAI` is `false` (since it was overridden) | 🔲 |
+| 2b.4 | AI intake — accept AI suggestion | Customer | Get an estimate, leave the category as suggested → "Book service" | `bookings.detectedByAI: true`, and `aiEstimateMin/Max`, `aiDurationMins`, `aiUrgency`, `aiConfidence`, `aiSuggestedSolution` are all populated on the booking document | 🔲 |
+| 2b.5 | AI intake validation | Customer | Tap "Get AI estimate" with an empty problem field | Inline error "Describe the problem first", no call made | 🔲 |
+| 2b.6 | AI chat — basic turn | Customer | Home → AI Assistant icon (top right) → type a message → send | A reply appears below; with no LLM configured, expect the canned fallback message, not a blank/error bubble | 🔲 |
+| 2b.7 | AI chat → booking shortcut | Customer | From the chat screen, tap "Book Service" in the app bar | Navigates to the AI intake screen (2b.1) | 🔲 |
+| 2b.8 | ai_logs written | Backend | After 2b.1/2b.6, check the `ai_logs` collection in Appwrite console | New documents exist with `feature: "aiIntake"`/`"aiChat"`, `tierUsed`, and `latencyMs` populated | 🔲 |
+
+---
+
+## 3. Security / permission checks
+
+These matter more than they look — Appwrite's default document permissions are easy to get
+wrong, and two real gaps were already found and fixed this way (see git log). Re-run after any
+schema or permission change.
+
+| # | Test | How | Expected | Status |
+|---|---|---|---|---|
+| 3.1 | Customer can't write booking status directly | `seed/e2e_test.js` step 1b, or manually via Appwrite console REST call as a real user session | Request rejected ("not authorized") | ✅ |
+| 3.2 | Worker can't edit their own offer post-creation | Attempt a client-side `updateDocument` on a `worker_offers` doc as the owning worker | Rejected — offer status changes only happen via `selectOffer`/`priceGuard` (server-side) | 🔲 (covered implicitly by 3.1's fix landing in `offer_repository.dart`; not yet scripted separately) |
+| 3.3 | Non-admin can't approve/reject workers | Call `aiRouter` with `feature: updateWorkerVerification` using a customer/worker session | 403 `"admin role required"` | 🔲 |
+| 3.4 | Unauthenticated call to admin feature | Call `updateWorkerVerification` via the server API key directly (no real user session) | 401 `"no authenticated caller"` | ✅ |
+| 3.5 | OTP required for service_started | Covered by 2.11/2.12 | — | ✅ |
+
+---
+
+## 4. Known gaps (not yet built — don't file these as bugs)
+
+Additional-charge approval mid-job, live map/ETA rendering, cancel/dispute flows, SOS, photo/
+voice problem intake (text-only AI intake is done — §2b), workerAssist quote suggestions,
+message translation, and a configured cloud LLM key (currently fallback-only — §0.6/§2b) —
+these are Phase 3+ per the plan's phase ordering (§13).

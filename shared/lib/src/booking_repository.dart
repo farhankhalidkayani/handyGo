@@ -29,6 +29,13 @@ class BookingRepository {
     required String addressText,
     required double lat,
     required double lng,
+    bool detectedByAi = false,
+    double? aiEstimateMin,
+    double? aiEstimateMax,
+    int? aiDurationMins,
+    String? aiUrgency,
+    double? aiConfidence,
+    String? aiSuggestedSolution,
   }) async {
     final doc = await databases.createDocument(
       databaseId: HandyGoConfig.databaseId,
@@ -43,6 +50,13 @@ class BookingRepository {
         'lng': lng,
         'status': BookingStatus.draft.wire,
         'otp': _generateOtp(),
+        'detectedByAI': detectedByAi,
+        if (aiEstimateMin != null) 'aiEstimateMin': aiEstimateMin,
+        if (aiEstimateMax != null) 'aiEstimateMax': aiEstimateMax,
+        if (aiDurationMins != null) 'aiDurationMins': aiDurationMins,
+        if (aiUrgency != null) 'aiUrgency': aiUrgency,
+        if (aiConfidence != null) 'aiConfidence': aiConfidence,
+        if (aiSuggestedSolution != null) 'aiSuggestedSolution': aiSuggestedSolution,
       },
       // Explicit empty permissions — Appwrite otherwise grants the creating session
       // implicit owner write access, which would let a customer bypass the state machine
@@ -174,6 +188,31 @@ class BookingRepository {
       'customerId': customerId,
       'rating': rating,
       if (reviewText != null) 'reviewText': reviewText,
+    });
+  }
+
+  /// §9.3: C2/C3/C4 — rules-first category match, LLM disambiguates if unsure. Never blocks
+  /// on the LLM tier (see functions/aiRouter/src/handlers/intake.js) — always returns a
+  /// usable category + price band even if the LLM is unreachable.
+  Future<Map<String, dynamic>> getAiIntake({
+    required String problemText,
+    double? lat,
+    double? lng,
+    String? imageCaption,
+  }) {
+    return aiRouter.call('intake', {
+      'problemText': problemText,
+      if (lat != null) 'lat': lat,
+      if (lng != null) 'lng': lng,
+      if (imageCaption != null) 'imageCaption': imageCaption,
+    });
+  }
+
+  /// §9.4: C1 — one multilingual chatbot turn.
+  Future<Map<String, dynamic>> getAiChatReply({required String message, String? bookingId}) {
+    return aiRouter.call('chat', {
+      'message': message,
+      if (bookingId != null) 'bookingId': bookingId,
     });
   }
 

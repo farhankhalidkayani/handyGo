@@ -14,7 +14,10 @@ class Booking {
   final double lng;
   final double? aiEstimateMin;
   final double? aiEstimateMax;
+  final int? aiDurationMins;
   final String aiUrgency;
+  final double? aiConfidence;
+  final String? aiSuggestedSolution;
   final double? finalQuote;
   final BookingStatus status;
   final String? otp;
@@ -33,7 +36,10 @@ class Booking {
     required this.lng,
     this.aiEstimateMin,
     this.aiEstimateMax,
+    this.aiDurationMins,
     this.aiUrgency = 'normal',
+    this.aiConfidence,
+    this.aiSuggestedSolution,
     this.finalQuote,
     required this.status,
     this.otp,
@@ -53,7 +59,10 @@ class Booking {
         lng: (map['lng'] as num).toDouble(),
         aiEstimateMin: (map['aiEstimateMin'] as num?)?.toDouble(),
         aiEstimateMax: (map['aiEstimateMax'] as num?)?.toDouble(),
+        aiDurationMins: (map['aiDurationMins'] as num?)?.toInt(),
         aiUrgency: map['aiUrgency'] as String? ?? 'normal',
+        aiConfidence: (map['aiConfidence'] as num?)?.toDouble(),
+        aiSuggestedSolution: map['aiSuggestedSolution'] as String?,
         finalQuote: (map['finalQuote'] as num?)?.toDouble(),
         status: BookingStatusWire.fromWire(map['status'] as String),
         otp: map['otp'] as String?,

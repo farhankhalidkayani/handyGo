@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:handygo_shared/handygo_shared.dart';
 
 import '../services/app_services.dart';
+import 'ai_chat_screen.dart';
+import 'ai_intake_screen.dart';
 import 'language_select_screen.dart';
 import 'rating_screen.dart';
 import 'service_request_screen.dart';
@@ -52,9 +54,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _requestService() async {
     await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => AiIntakeScreen(profile: widget.profile)),
+    );
+    setState(() => _activeBookingFuture = AppServices.bookings.findActiveForCustomer(widget.profile.id));
+  }
+
+  Future<void> _requestServiceManually() async {
+    await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => ServiceRequestScreen(profile: widget.profile)),
     );
     setState(() => _activeBookingFuture = AppServices.bookings.findActiveForCustomer(widget.profile.id));
+  }
+
+  void _openAiChat() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => AiChatScreen(profile: widget.profile)),
+    );
   }
 
   @override
@@ -63,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Handy Go'),
         actions: [
+          IconButton(icon: const Icon(Icons.smart_toy), tooltip: 'AI Assistant', onPressed: _openAiChat),
           IconButton(icon: const Icon(Icons.logout), onPressed: () => _logout(context)),
         ],
       ),
@@ -92,6 +108,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 24),
             FilledButton(onPressed: _requestService, child: const Text('Request a service')),
+            const SizedBox(height: 8),
+            OutlinedButton(onPressed: _requestServiceManually, child: const Text('Pick a category manually')),
           ],
         ),
       ),
