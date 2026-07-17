@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:handygo_shared/handygo_shared.dart';
 import 'package:latlong2/latlong.dart' as latlong;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../services/app_services.dart';
 import '../widgets/sos_button.dart';
@@ -143,6 +144,25 @@ class _TrackingScreenState extends State<TrackingScreen> {
     }
   }
 
+  Future<void> _callWorker() async {
+    final workerId = _booking?.workerId;
+    if (workerId == null) return;
+    setState(() => _error = null);
+    try {
+      final worker = await AppServices.profiles.findById(workerId);
+      final phone = worker?.phone;
+      if (phone == null || phone.isEmpty) {
+        setState(() => _error = 'No phone number on file for this worker');
+        return;
+      }
+      if (!await launchUrl(Uri(scheme: 'tel', path: phone))) {
+        setState(() => _error = 'Could not launch phone dialer');
+      }
+    } catch (e) {
+      setState(() => _error = 'Call failed: $e');
+    }
+  }
+
   Future<void> _cancelBooking() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -193,6 +213,12 @@ class _TrackingScreenState extends State<TrackingScreen> {
       appBar: AppBar(
         title: const Text('Tracking'),
         actions: [
+          if (booking.workerId != null)
+            IconButton(
+              icon: const Icon(Icons.call_outlined),
+              tooltip: 'Call worker',
+              onPressed: _callWorker,
+            ),
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline),
             onPressed: () => Navigator.of(context).push(

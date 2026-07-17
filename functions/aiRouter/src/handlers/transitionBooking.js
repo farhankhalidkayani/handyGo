@@ -2,6 +2,7 @@
 // jump statuses illegally (e.g. a worker can't set `service_started` without a valid OTP).
 // This is the ONLY place `bookings.status` may be written from — clients must never write
 // status directly (§11 server-only writes for sensitive fields).
+const { Query } = require('node-appwrite');
 const { getDatabases, DB_ID } = require('../lib/appwriteClient');
 
 const TRANSITIONS = {
@@ -76,6 +77,7 @@ module.exports = async function transitionBooking(body) {
     const materialCharges = booking.additionalCharges || 0;
     const total = serviceCharges + materialCharges;
     const commission = Math.round(total * 0.15 * 100) / 100;
+    const netToWorker = Math.round((total - commission) * 100) / 100;
     await databases.createDocument(DB_ID, 'transactions', 'unique()', {
       bookingId,
       customerId: booking.customerId,
@@ -88,8 +90,24 @@ module.exports = async function transitionBooking(body) {
       method: 'cod',
       status: 'paid',
       commission,
-      netToWorker: Math.round((total - commission) * 100) / 100,
+      netToWorker,
     }).catch(() => {});
+
+    // Credits the worker's wallet (plan §12 Worker checklist "Wallet + withdraw") — walletBalance
+    // is server-only, same reasoning as commission/netToWorker above, so this is the only place
+    // it's ever incremented.
+    if (booking.workerId) {
+      const workerRes = await databases.listDocuments(DB_ID, 'worker_profiles', [
+        Query.equal('userId', booking.workerId),
+        Query.limit(1),
+      ]);
+      const workerProfile = workerRes.documents[0];
+      if (workerProfile) {
+        await databases.updateDocument(DB_ID, 'worker_profiles', workerProfile.$id, {
+          walletBalance: (workerProfile.walletBalance || 0) + netToWorker,
+        }).catch(() => {});
+      }
+    }
   }
 
   return { status: 200, body: { ok: true, status: nextStatus } };

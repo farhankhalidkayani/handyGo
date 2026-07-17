@@ -11,8 +11,9 @@ import 'offers_screen.dart';
 /// the core booking state machine has something real to drive end to end.
 class ServiceRequestScreen extends StatefulWidget {
   final UserProfile profile;
+  final String? initialCategoryId;
 
-  const ServiceRequestScreen({super.key, required this.profile});
+  const ServiceRequestScreen({super.key, required this.profile, this.initialCategoryId});
 
   @override
   State<ServiceRequestScreen> createState() => _ServiceRequestScreenState();
@@ -31,6 +32,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
   void initState() {
     super.initState();
     _categoriesFuture = AppServices.categories.listAll();
+    _selectedCategoryId = widget.initialCategoryId;
   }
 
   Future<void> _submit() async {

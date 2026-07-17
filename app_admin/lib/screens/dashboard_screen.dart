@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../services/app_services.dart';
+import 'ai_insights_body.dart';
 import 'analytics_body.dart';
 import 'auth_screen.dart';
 import 'bookings_screen.dart';
+import 'finance_body.dart';
 import 'fraud_reports_body.dart';
 import 'notifications_body.dart';
+import 'operations_map_body.dart';
 import 'sos_control_center_body.dart';
 import 'verification_queue_body.dart';
 
@@ -23,6 +26,9 @@ const _titles = [
   'Fraud reports',
   'Notifications',
   'Analytics',
+  'Live operations map',
+  'Finance',
+  'AI Insights',
 ];
 
 class _DashboardScreenState extends State<DashboardScreen> {
@@ -54,6 +60,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           FraudReportsBody(),
           NotificationsBody(),
           AnalyticsBody(),
+          OperationsMapBody(),
+          FinanceBody(),
+          AiInsightsBody(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -66,6 +75,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           NavigationDestination(icon: Icon(Icons.report_problem), label: 'Fraud'),
           NavigationDestination(icon: Icon(Icons.notifications), label: 'Alerts'),
           NavigationDestination(icon: Icon(Icons.bar_chart), label: 'Analytics'),
+          NavigationDestination(icon: Icon(Icons.map_outlined), label: 'Map'),
+          NavigationDestination(icon: Icon(Icons.account_balance_outlined), label: 'Finance'),
+          NavigationDestination(icon: Icon(Icons.insights), label: 'Insights'),
         ],
       ),
     );

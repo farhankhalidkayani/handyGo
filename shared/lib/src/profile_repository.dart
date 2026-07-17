@@ -1,6 +1,7 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 
+import 'ai_router_client.dart';
 import 'appwrite_config.dart';
 import 'models/user_profile.dart';
 import 'models/worker_profile.dart';
@@ -10,8 +11,11 @@ import 'models/worker_profile.dart';
 /// how the apps decide whether to show profile setup vs. go straight home.
 class ProfileRepository {
   final Databases databases;
+  final AiRouterClient aiRouter;
 
-  ProfileRepository(Client client) : databases = Databases(client);
+  ProfileRepository(Client client)
+      : databases = Databases(client),
+        aiRouter = AiRouterClient(client);
 
   Future<UserProfile?> findByAuthId(String authId) async {
     final res = await databases.listDocuments(
@@ -152,6 +156,24 @@ class ProfileRepository {
       documentId: workerProfileId,
       data: {'currentLat': lat, 'currentLng': lng},
     );
+  }
+
+  /// Zeroes the worker's `walletBalance` server-side (plan §12 "Wallet + withdraw") — see
+  /// functions/aiRouter/src/handlers/withdrawWallet.js for why this can't be a direct client
+  /// update (walletBalance is server-only, only ever credited on booking completion).
+  Future<Map<String, dynamic>> withdrawWallet(String workerProfileId) {
+    return aiRouter.call('withdrawWallet', {'workerProfileId': workerProfileId});
+  }
+
+  /// Plan §12 Worker checklist "AI performance tips" — see workerAssist.js's `performanceTips`
+  /// mode (rules-first for clear-cut scores, LLM only for the mixed middle range).
+  Future<Map<String, dynamic>> getPerformanceTip(WorkerProfile worker) {
+    return aiRouter.call('workerAssist', {
+      'mode': 'performanceTips',
+      'rating': worker.rating,
+      'jobsCompleted': worker.jobsCompleted,
+      'performanceScore': worker.performanceScore,
+    });
   }
 
   Future<WorkerProfile?> findWorkerProfileByUserId(String userId) async {

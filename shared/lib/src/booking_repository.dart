@@ -142,6 +142,21 @@ class BookingRepository {
     return res.documents.map((d) => Booking.fromMap({...d.data, '\$id': d.$id})).toList();
   }
 
+  /// All of this customer's bookings, most recent first — home screen's "previous bookings"
+  /// (plan §12) and any other history view.
+  Future<List<Booking>> listForCustomer(String customerId, {int limit = 50}) async {
+    final res = await databases.listDocuments(
+      databaseId: HandyGoConfig.databaseId,
+      collectionId: Collections.bookings,
+      queries: [
+        Query.equal('customerId', customerId),
+        Query.orderDesc('\$createdAt'),
+        Query.limit(limit),
+      ],
+    );
+    return res.documents.map((d) => Booking.fromMap({...d.data, '\$id': d.$id})).toList();
+  }
+
   Future<List<Booking>> listAllBookings({int limit = 100}) async {
     final res = await databases.listDocuments(
       databaseId: HandyGoConfig.databaseId,

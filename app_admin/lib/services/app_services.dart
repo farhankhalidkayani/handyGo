@@ -15,6 +15,8 @@ class AppServices {
   static final FraudRepository fraud = FraudRepository(client);
   static final NotificationRepository notifications = NotificationRepository(client);
   static final CategoryRepository categories = CategoryRepository(client);
+  static final TransactionRepository transactions = TransactionRepository(client);
+  static final MessageRepository messages = MessageRepository(client);
 
   /// Calls the `aiRouter` Function's `updateWorkerVerification` feature (admin-gated
   /// server-side via the caller's real Appwrite user id — see

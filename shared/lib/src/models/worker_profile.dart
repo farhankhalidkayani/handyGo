@@ -9,6 +9,9 @@ class WorkerProfile {
   final int jobsCompleted;
   final double? currentLat;
   final double? currentLng;
+  final double walletBalance;
+  final double pendingBalance;
+  final int performanceScore;
 
   const WorkerProfile({
     required this.id,
@@ -20,6 +23,9 @@ class WorkerProfile {
     required this.jobsCompleted,
     this.currentLat,
     this.currentLng,
+    this.walletBalance = 0,
+    this.pendingBalance = 0,
+    this.performanceScore = 50,
   });
 
   factory WorkerProfile.fromMap(Map<String, dynamic> map) => WorkerProfile(
@@ -32,5 +38,8 @@ class WorkerProfile {
         jobsCompleted: (map['jobsCompleted'] as num?)?.toInt() ?? 0,
         currentLat: (map['currentLat'] as num?)?.toDouble(),
         currentLng: (map['currentLng'] as num?)?.toDouble(),
+        walletBalance: (map['walletBalance'] as num?)?.toDouble() ?? 0,
+        pendingBalance: (map['pendingBalance'] as num?)?.toDouble() ?? 0,
+        performanceScore: (map['performanceScore'] as num?)?.toInt() ?? 50,
       );
 }

@@ -20,6 +20,7 @@ const handlers = {
   requestAdditionalCharge: require('./handlers/requestAdditionalCharge'),
   approveAdditionalCharge: require('./handlers/approveAdditionalCharge'),
   markNotificationRead: require('./handlers/markNotificationRead'),
+  withdrawWallet: require('./handlers/withdrawWallet'),
 };
 
 module.exports = async (ctx) => {

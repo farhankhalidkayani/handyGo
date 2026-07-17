@@ -46,6 +46,17 @@ class MessageRepository {
     return res.documents.map((d) => Message.fromMap({...d.data, '\$id': d.$id})).toList();
   }
 
+  /// Admin AI insights (plan §12 "chat-scan flags") — messages eventRouter's `translate`
+  /// handler flagged for external-payment/abuse language (§9.5), most recent first.
+  Future<List<Message>> listFlagged({int limit = 50}) async {
+    final res = await databases.listDocuments(
+      databaseId: HandyGoConfig.databaseId,
+      collectionId: Collections.messages,
+      queries: [Query.equal('aiFlagged', true), Query.orderDesc('\$createdAt'), Query.limit(limit)],
+    );
+    return res.documents.map((d) => Message.fromMap({...d.data, '\$id': d.$id})).toList();
+  }
+
   RealtimeSubscription subscribeToMessages() {
     return realtime.subscribe([
       'databases.${HandyGoConfig.databaseId}.collections.${Collections.messages}.documents',

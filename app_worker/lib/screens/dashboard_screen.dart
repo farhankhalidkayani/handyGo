@@ -5,7 +5,9 @@ import '../services/app_services.dart';
 import 'active_job_screen.dart';
 import 'language_select_screen.dart';
 import 'notifications_screen.dart';
+import 'safety_center_screen.dart';
 import 'send_offer_screen.dart';
+import 'wallet_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final UserProfile profile;
@@ -24,6 +26,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _togglingAvailability = false;
   String? _error;
   int _unreadCount = 0;
+  final Set<String> _declinedJobIds = {};
 
   @override
   void initState() {
@@ -37,6 +40,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final notifications = await AppServices.notifications.listForUser(widget.profile.id);
     if (!mounted) return;
     setState(() => _unreadCount = notifications.where((n) => !n.read).length);
+  }
+
+  Future<void> _openWallet() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => WalletScreen(worker: _worker)),
+    );
+    final refreshed = await AppServices.profiles.findWorkerProfileByUserId(widget.profile.id);
+    if (mounted && refreshed != null) setState(() => _worker = refreshed);
   }
 
   Future<void> _openNotifications() async {
@@ -118,6 +129,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: const Text('Dashboard'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.shield_outlined),
+            tooltip: 'Safety Center',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => SafetyCenterScreen(profile: widget.profile)),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.account_balance_wallet_outlined),
+            tooltip: 'Wallet',
+            onPressed: _openWallet,
+          ),
           Stack(
             alignment: Alignment.center,
             children: [
@@ -180,7 +203,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: Center(child: CircularProgressIndicator()),
                       );
                     }
-                    final jobs = snapshot.data!;
+                    final jobs = snapshot.data!.where((b) => !_declinedJobIds.contains(b.id)).toList();
                     if (jobs.isEmpty) return const Text('No open jobs right now.');
                     return Column(
                       children: jobs
@@ -188,9 +211,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 child: ListTile(
                                   title: Text(b.problemText),
                                   subtitle: Text(b.addressText),
-                                  trailing: FilledButton(
-                                    onPressed: () => _sendOffer(b),
-                                    child: const Text('Offer'),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.close),
+                                        tooltip: 'Decline — hide from my list',
+                                        onPressed: () => setState(() => _declinedJobIds.add(b.id)),
+                                      ),
+                                      FilledButton(
+                                        onPressed: () => _sendOffer(b),
+                                        child: const Text('Offer'),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ))

@@ -16,4 +16,5 @@ class AppServices {
   static final FraudRepository fraud = FraudRepository(client);
   static final MediaRepository media = MediaRepository(client);
   static final NotificationRepository notifications = NotificationRepository(client);
+  static final TransactionRepository transactions = TransactionRepository(client);
 }
