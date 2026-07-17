@@ -19,6 +19,7 @@ const handlers = {
   updateFraudDecision: require('./handlers/updateFraudDecision'),
   requestAdditionalCharge: require('./handlers/requestAdditionalCharge'),
   approveAdditionalCharge: require('./handlers/approveAdditionalCharge'),
+  markNotificationRead: require('./handlers/markNotificationRead'),
 };
 
 module.exports = async (ctx) => {

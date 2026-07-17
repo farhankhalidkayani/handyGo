@@ -5,6 +5,7 @@ import '../services/app_services.dart';
 import 'ai_chat_screen.dart';
 import 'ai_intake_screen.dart';
 import 'language_select_screen.dart';
+import 'notifications_screen.dart';
 import 'rating_screen.dart';
 import 'service_request_screen.dart';
 import 'tracking_screen.dart';
@@ -20,11 +21,26 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Future<Booking?> _activeBookingFuture;
+  int _unreadCount = 0;
 
   @override
   void initState() {
     super.initState();
     _activeBookingFuture = AppServices.bookings.findActiveForCustomer(widget.profile.id);
+    _loadUnreadCount();
+  }
+
+  Future<void> _loadUnreadCount() async {
+    final notifications = await AppServices.notifications.listForUser(widget.profile.id);
+    if (!mounted) return;
+    setState(() => _unreadCount = notifications.where((n) => !n.read).length);
+  }
+
+  Future<void> _openNotifications() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => NotificationsScreen(profile: widget.profile)),
+    );
+    _loadUnreadCount();
   }
 
   Future<void> _logout(BuildContext context) async {
@@ -79,6 +95,27 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Handy Go'),
         actions: [
           IconButton(icon: const Icon(Icons.smart_toy), tooltip: 'AI Assistant', onPressed: _openAiChat),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: _openNotifications),
+              if (_unreadCount > 0)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                    constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+                    child: Text(
+                      '$_unreadCount',
+                      style: const TextStyle(color: Colors.white, fontSize: 9),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
           IconButton(icon: const Icon(Icons.logout), onPressed: () => _logout(context)),
         ],
       ),

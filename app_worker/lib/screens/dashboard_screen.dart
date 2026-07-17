@@ -4,6 +4,7 @@ import 'package:handygo_shared/handygo_shared.dart';
 import '../services/app_services.dart';
 import 'active_job_screen.dart';
 import 'language_select_screen.dart';
+import 'notifications_screen.dart';
 import 'send_offer_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -22,12 +23,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<List<Booking>>? _openJobsFuture;
   bool _togglingAvailability = false;
   String? _error;
+  int _unreadCount = 0;
 
   @override
   void initState() {
     super.initState();
     _worker = widget.worker;
     _refresh();
+    _loadUnreadCount();
+  }
+
+  Future<void> _loadUnreadCount() async {
+    final notifications = await AppServices.notifications.listForUser(widget.profile.id);
+    if (!mounted) return;
+    setState(() => _unreadCount = notifications.where((n) => !n.read).length);
+  }
+
+  Future<void> _openNotifications() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => NotificationsScreen(profile: widget.profile)),
+    );
+    _loadUnreadCount();
   }
 
   void _refresh() {
@@ -101,7 +117,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard'),
-        actions: [IconButton(icon: const Icon(Icons.logout), onPressed: () => _logout(context))],
+        actions: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: _openNotifications),
+              if (_unreadCount > 0)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                    constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+                    child: Text('$_unreadCount', style: const TextStyle(color: Colors.white, fontSize: 9), textAlign: TextAlign.center),
+                  ),
+                ),
+            ],
+          ),
+          IconButton(icon: const Icon(Icons.logout), onPressed: () => _logout(context)),
+        ],
       ),
       body: FutureBuilder<Booking?>(
         future: _activeJobFuture,
