@@ -1398,6 +1398,12 @@
                     "type": "string",
                     "size": 2000,
                     "required": false
+                },
+                {
+                    "key": "aiNarrative",
+                    "type": "string",
+                    "size": 2000,
+                    "required": false
                 }
             ],
             "indexes": [

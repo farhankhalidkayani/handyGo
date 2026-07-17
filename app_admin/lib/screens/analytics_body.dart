@@ -19,6 +19,7 @@ class AnalyticsBody extends StatefulWidget {
 
 class _AnalyticsBodyState extends State<AnalyticsBody> {
   Map<String, dynamic>? _latest;
+  List<Map<String, dynamic>> _recentDays = [];
   Map<String, String> _categoryNames = {};
   bool _loading = true;
   String? _error;
@@ -35,12 +36,14 @@ class _AnalyticsBodyState extends State<AnalyticsBody> {
       final res = await AppServices.databases.listDocuments(
         databaseId: HandyGoConfig.databaseId,
         collectionId: Collections.analyticsDaily,
-        queries: [Query.orderDesc('date'), Query.limit(1)],
+        queries: [Query.orderDesc('date'), Query.limit(14)],
       );
       if (!mounted) return;
+      final days = res.documents.map((d) => d.data).toList();
       setState(() {
         _categoryNames = {for (final c in categories) c.id: c.name};
-        _latest = res.documents.isNotEmpty ? res.documents.first.data : null;
+        _latest = days.isNotEmpty ? days.first : null;
+        _recentDays = days.reversed.toList(); // oldest -> newest, left-to-right on the chart
         _loading = false;
       });
     } catch (e) {
@@ -91,6 +94,58 @@ class _AnalyticsBodyState extends State<AnalyticsBody> {
             _StatCard(label: 'Avg rating', value: (latest['avgRating'] as num).toStringAsFixed(1)),
           ],
         ),
+        if ((latest['aiNarrative'] as String?)?.isNotEmpty ?? false) ...[
+          const SizedBox(height: 16),
+          Card(
+            color: Theme.of(context).colorScheme.primaryContainer,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.auto_awesome, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(latest['aiNarrative'] as String)),
+                ],
+              ),
+            ),
+          ),
+        ],
+        if (_recentDays.length > 1) ...[
+          const SizedBox(height: 24),
+          Text('Revenue (last ${_recentDays.length} days)', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          _TrendChart(
+            values: _recentDays.map((d) => (d['revenue'] as num?)?.toDouble() ?? 0).toList(),
+            color: Colors.green,
+            valueFormatter: (v) => 'Rs. ${v.toStringAsFixed(0)}',
+          ),
+          const SizedBox(height: 24),
+          Text('Cancellation rate (last ${_recentDays.length} days)', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          _TrendChart(
+            values: _recentDays.map((d) {
+              final total = (d['totalBookings'] as num?)?.toInt() ?? 0;
+              final cancelled = (d['cancelled'] as num?)?.toInt() ?? 0;
+              return total == 0 ? 0.0 : cancelled / total * 100;
+            }).toList(),
+            color: Colors.red,
+            valueFormatter: (v) => '${v.toStringAsFixed(0)}%',
+          ),
+          const SizedBox(height: 24),
+          Text('Daily bookings (last ${_recentDays.length} days)', style: Theme.of(context).textTheme.titleMedium),
+          const Text(
+            'True customer-growth (unique new customers) isn\'t tracked separately — this is '
+            'total bookings per day as the closest available proxy.',
+            style: TextStyle(fontSize: 11, color: Colors.grey),
+          ),
+          const SizedBox(height: 8),
+          _TrendChart(
+            values: _recentDays.map((d) => (d['totalBookings'] as num?)?.toDouble() ?? 0).toList(),
+            color: Colors.blue,
+            valueFormatter: (v) => v.toStringAsFixed(0),
+          ),
+        ],
         const SizedBox(height: 24),
         Text('Demand by category', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
@@ -156,6 +211,48 @@ class _StatCard extends StatelessWidget {
             Text(label, style: const TextStyle(color: Colors.grey)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Deliberately no charting package — a handful of bars is all these trends need, and it
+/// keeps this project's dependency footprint small.
+class _TrendChart extends StatelessWidget {
+  final List<double> values;
+  final Color color;
+  final String Function(double) valueFormatter;
+
+  const _TrendChart({required this.values, required this.color, required this.valueFormatter});
+
+  @override
+  Widget build(BuildContext context) {
+    final maxValue = values.fold<double>(0, (max, v) => v > max ? v : max);
+    return SizedBox(
+      height: 80,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: values.map((v) {
+          final heightFraction = maxValue == 0 ? 0.0 : v / maxValue;
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Tooltip(
+                message: valueFormatter(v),
+                child: FractionallySizedBox(
+                  heightFactor: heightFraction.clamp(0.02, 1.0),
+                  alignment: Alignment.bottomCenter,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.7),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

@@ -1,7 +1,10 @@
-// §9.1/A7. Rules-based aggregation for admin dashboards; LLM narrative generation is left to
-// the Admin Panel UI, so this stays cheap, deterministic and always-on.
+// §9.1/A7. Rules-based aggregation for admin dashboards, plus a short LLM-authored narrative
+// on top (demand forecast / shortage / cancellation insight) — read-only and advisory only,
+// never writes any decision field, so it stays inside the §8.3 governance rule (AI recommends,
+// admin decides) even though this is the one AI feature with no explicit decision buttons.
 const { Query } = require('node-appwrite');
 const { getDatabases, DB_ID } = require('../lib/appwriteClient');
+const { askLLM } = require('../lib/llm');
 
 function startOfToday() {
   const d = new Date();
@@ -34,6 +37,25 @@ module.exports = async function analyticsRollup({ log }) {
     cancellationReasons[reason] = (cancellationReasons[reason] || 0) + 1;
   }
 
+  const sys = `You are HandyGo's admin analytics assistant. Given today's raw booking numbers,
+write a 2-3 sentence recommendation card: call out anything that needs attention (a spike in
+cancellations, low completion rate, a category with unusually high demand) and one concrete
+suggestion. Be specific with the numbers given. If nothing stands out, just say things look
+normal. Never mention refunds, bans, or suspensions — this is informational only, admins make
+those decisions elsewhere.`;
+  const narrativeOut = await askLLM(sys, JSON.stringify({
+    totalBookings: todaysBookings.length,
+    completed: completed.length,
+    cancelled: cancelled.length,
+    revenue,
+    avgRating,
+    demandByCategory,
+    cancellationReasons,
+  }));
+  const aiNarrative = narrativeOut.tier === 'llm' && narrativeOut.text
+    ? narrativeOut.text
+    : `${todaysBookings.length} bookings today, ${completed.length} completed, ${cancelled.length} cancelled.`;
+
   const doc = {
     date: today.toISOString(),
     totalBookings: todaysBookings.length,
@@ -44,6 +66,7 @@ module.exports = async function analyticsRollup({ log }) {
     demandByCategory: JSON.stringify(demandByCategory),
     workerShortageAreas: JSON.stringify({}), // needs geographic clustering — out of scope for the FYP MVP
     cancellationReasons: JSON.stringify(cancellationReasons),
+    aiNarrative,
   };
 
   const existing = await databases

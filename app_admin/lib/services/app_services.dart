@@ -35,4 +35,32 @@ class AppServices {
       if (requestMoreInfo) 'requestMoreInfo': true,
     });
   }
+
+  /// See functions/aiRouter/src/handlers/reassignWorker.js.
+  static Future<Map<String, dynamic>> reassignWorker({
+    required String bookingId,
+    required String newWorkerId,
+    String? reason,
+  }) {
+    return aiRouter.call('reassignWorker', {
+      'bookingId': bookingId,
+      'newWorkerId': newWorkerId,
+      if (reason != null) 'reason': reason,
+    });
+  }
+
+  /// See functions/aiRouter/src/handlers/applyPenalty.js.
+  static Future<Map<String, dynamic>> applyPenalty({
+    required String bookingId,
+    required String userId,
+    required String reason,
+    int points = 10,
+  }) {
+    return aiRouter.call('applyPenalty', {
+      'bookingId': bookingId,
+      'userId': userId,
+      'reason': reason,
+      'points': points,
+    });
+  }
 }

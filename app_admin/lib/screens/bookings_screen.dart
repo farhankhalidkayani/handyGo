@@ -1,6 +1,7 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
 import 'package:handygo_shared/handygo_shared.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../services/app_services.dart';
 
@@ -156,6 +157,112 @@ class _BookingsBodyState extends State<BookingsBody> {
     );
   }
 
+  Future<void> _contact(String userId) async {
+    setState(() => _error = null);
+    try {
+      final user = await AppServices.profiles.findById(userId);
+      final phone = user?.phone;
+      if (phone == null || phone.isEmpty) {
+        setState(() => _error = 'No phone number on file for this user');
+        return;
+      }
+      if (!await launchUrl(Uri(scheme: 'tel', path: phone))) {
+        setState(() => _error = 'Could not launch phone dialer');
+      }
+    } catch (e) {
+      setState(() => _error = 'Call failed: $e');
+    }
+  }
+
+  Future<void> _reassign(Booking b) async {
+    if (b.workerId == null) return;
+    final workersRes = await AppServices.databases.listDocuments(
+      databaseId: HandyGoConfig.databaseId,
+      collectionId: Collections.workerProfiles,
+      queries: [
+        Query.equal('verificationStatus', 'approved'),
+        Query.notEqual('userId', b.workerId!),
+        Query.limit(50),
+      ],
+    );
+    final candidates = workersRes.documents.map((d) => WorkerProfile.fromMap({...d.data, '\$id': d.$id})).toList();
+    if (!mounted) return;
+    if (candidates.isEmpty) {
+      setState(() => _error = 'No other approved workers available to reassign to');
+      return;
+    }
+    final chosen = await showDialog<WorkerProfile>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Reassign to which worker?'),
+        children: candidates
+            .map((w) => SimpleDialogOption(
+                  onPressed: () => Navigator.of(context).pop(w),
+                  child: Text('${w.skills.join(', ')} · rating ${w.rating.toStringAsFixed(1)}'),
+                ))
+            .toList(),
+      ),
+    );
+    if (chosen == null || !mounted) return;
+    final reasonController = TextEditingController();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reason for reassigning'),
+        content: TextField(controller: reasonController, autofocus: true),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(reasonController.text.trim()),
+            child: const Text('Reassign'),
+          ),
+        ],
+      ),
+    );
+    if (reason == null) return;
+    setState(() => _error = null);
+    try {
+      await AppServices.reassignWorker(bookingId: b.id, newWorkerId: chosen.userId, reason: reason);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking reassigned.')));
+    } catch (e) {
+      setState(() => _error = 'Reassign failed: $e');
+    }
+  }
+
+  Future<void> _penalize(Booking b, {required bool worker}) async {
+    final userId = worker ? b.workerId : b.customerId;
+    if (userId == null) return;
+    final reasonController = TextEditingController();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Penalize this ${worker ? 'worker' : 'customer'}'),
+        content: TextField(
+          controller: reasonController,
+          decoration: const InputDecoration(labelText: 'Reason'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(reasonController.text.trim()),
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+    if (reason == null || reason.isEmpty) return;
+    setState(() => _error = null);
+    try {
+      await AppServices.applyPenalty(bookingId: b.id, userId: userId, reason: reason);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Penalty applied.')));
+    } catch (e) {
+      setState(() => _error = 'Penalty failed: $e');
+    }
+  }
+
   @override
   void dispose() {
     _subscription?.close();
@@ -226,6 +333,33 @@ class _BookingsBodyState extends State<BookingsBody> {
                                 ),
                                 child: const Text('Raise dispute'),
                               ),
+                            OutlinedButton.icon(
+                              onPressed: () => _contact(b.customerId),
+                              icon: const Icon(Icons.call, size: 16),
+                              label: const Text('Call customer'),
+                            ),
+                            if (b.workerId != null) ...[
+                              OutlinedButton.icon(
+                                onPressed: () => _contact(b.workerId!),
+                                icon: const Icon(Icons.call, size: 16),
+                                label: const Text('Call worker'),
+                              ),
+                              if (!_terminalStatuses.contains(b.status) && b.status != BookingStatus.disputed)
+                                OutlinedButton(
+                                  onPressed: () => _reassign(b),
+                                  child: const Text('Reassign worker'),
+                                ),
+                              OutlinedButton(
+                                style: OutlinedButton.styleFrom(foregroundColor: Colors.deepOrange),
+                                onPressed: () => _penalize(b, worker: true),
+                                child: const Text('Penalize worker'),
+                              ),
+                            ],
+                            OutlinedButton(
+                              style: OutlinedButton.styleFrom(foregroundColor: Colors.deepOrange),
+                              onPressed: () => _penalize(b, worker: false),
+                              child: const Text('Penalize customer'),
+                            ),
                           ],
                         ),
                       ],

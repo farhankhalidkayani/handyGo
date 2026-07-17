@@ -21,6 +21,8 @@ const handlers = {
   approveAdditionalCharge: require('./handlers/approveAdditionalCharge'),
   markNotificationRead: require('./handlers/markNotificationRead'),
   withdrawWallet: require('./handlers/withdrawWallet'),
+  reassignWorker: require('./handlers/reassignWorker'),
+  applyPenalty: require('./handlers/applyPenalty'),
 };
 
 module.exports = async (ctx) => {
