@@ -1010,6 +1010,46 @@
             ]
         },
         {
+            "$id": "wallet_withdrawals",
+            "$permissions": [
+                "read(\"team:admin\")"
+            ],
+            "databaseId": "handygo",
+            "name": "wallet_withdrawals",
+            "enabled": true,
+            "documentSecurity": true,
+            "attributes": [
+                {
+                    "key": "workerId",
+                    "type": "string",
+                    "size": 64,
+                    "required": true
+                },
+                {
+                    "key": "amount",
+                    "type": "double",
+                    "required": false,
+                    "default": 0
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "size": 24,
+                    "required": false,
+                    "default": "completed"
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_workerId",
+                    "type": "key",
+                    "attributes": [
+                        "workerId"
+                    ]
+                }
+            ]
+        },
+        {
             "$id": "worker_locations",
             "$permissions": [
                 "read(\"users\")"

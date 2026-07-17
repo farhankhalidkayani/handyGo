@@ -15,6 +15,7 @@ class FinanceBody extends StatefulWidget {
 
 class _FinanceBodyState extends State<FinanceBody> {
   List<BookingTransaction> _transactions = [];
+  List<WalletWithdrawal> _withdrawals = [];
   bool _loading = true;
   String? _error;
 
@@ -27,9 +28,11 @@ class _FinanceBodyState extends State<FinanceBody> {
   Future<void> _load() async {
     try {
       final transactions = await AppServices.transactions.listRecent();
+      final withdrawals = await AppServices.transactions.listRecentWithdrawals();
       if (!mounted) return;
       setState(() {
         _transactions = transactions;
+        _withdrawals = withdrawals;
         _loading = false;
       });
     } catch (e) {
@@ -49,38 +52,69 @@ class _FinanceBodyState extends State<FinanceBody> {
     final totalRevenue = _transactions.fold<double>(0, (sum, t) => sum + t.total);
     final totalCommission = _transactions.fold<double>(0, (sum, t) => sum + t.commission);
     final totalPaidToWorkers = _transactions.fold<double>(0, (sum, t) => sum + t.netToWorker);
+    final totalWithdrawn = _withdrawals.fold<double>(0, (sum, w) => sum + w.amount);
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              _StatCard(label: 'Total revenue', value: 'Rs. ${totalRevenue.toStringAsFixed(0)}'),
-              _StatCard(label: 'Platform commission', value: 'Rs. ${totalCommission.toStringAsFixed(0)}'),
-              _StatCard(label: 'Paid to workers', value: 'Rs. ${totalPaidToWorkers.toStringAsFixed(0)}'),
-            ],
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _StatCard(label: 'Total revenue', value: 'Rs. ${totalRevenue.toStringAsFixed(0)}'),
+                _StatCard(label: 'Platform commission', value: 'Rs. ${totalCommission.toStringAsFixed(0)}'),
+                _StatCard(label: 'Paid to workers', value: 'Rs. ${totalPaidToWorkers.toStringAsFixed(0)}'),
+                _StatCard(label: 'Withdrawn', value: 'Rs. ${totalWithdrawn.toStringAsFixed(0)}'),
+              ],
+            ),
           ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            itemCount: _transactions.length,
-            itemBuilder: (context, i) {
-              final t = _transactions[i];
-              return ListTile(
-                title: Text('Rs. ${t.total.toStringAsFixed(0)} — ${t.method.toUpperCase()} (${t.status})'),
-                subtitle: Text(
-                  'Service: Rs. ${t.serviceCharges.toStringAsFixed(0)} · Materials: Rs. ${t.materialCharges.toStringAsFixed(0)}\n'
-                  'Commission: Rs. ${t.commission.toStringAsFixed(0)} · Net to worker: Rs. ${t.netToWorker.toStringAsFixed(0)}',
+          const TabBar(tabs: [Tab(text: 'Transactions'), Tab(text: 'Withdrawals')]),
+          Expanded(
+            child: TabBarView(
+              children: [
+                ListView.builder(
+                  itemCount: _transactions.length,
+                  itemBuilder: (context, i) {
+                    final t = _transactions[i];
+                    return ListTile(
+                      title: Text('Rs. ${t.total.toStringAsFixed(0)} — ${t.method.toUpperCase()} (${t.status})'),
+                      subtitle: Text(
+                        'Service: Rs. ${t.serviceCharges.toStringAsFixed(0)} · Materials: Rs. ${t.materialCharges.toStringAsFixed(0)}\n'
+                        'Commission: Rs. ${t.commission.toStringAsFixed(0)} · Net to worker: Rs. ${t.netToWorker.toStringAsFixed(0)}',
+                      ),
+                      isThreeLine: true,
+                    );
+                  },
                 ),
-                isThreeLine: true,
-              );
-            },
+                _withdrawals.isEmpty
+                    ? const Center(child: Text('No withdrawals yet.'))
+                    : ListView.builder(
+                        itemCount: _withdrawals.length,
+                        itemBuilder: (context, i) {
+                          final w = _withdrawals[i];
+                          return ListTile(
+                            title: Text('Rs. ${w.amount.toStringAsFixed(0)} — ${w.status}'),
+                            subtitle: Text('Worker: ${w.workerId} · ${w.createdAt.toLocal()}'),
+                          );
+                        },
+                      ),
+              ],
+            ),
           ),
-        ),
-      ],
+          const Padding(
+            padding: EdgeInsets.all(8),
+            child: Text(
+              'No failed-payment view — payment is instant COD settlement (no gateway that '
+              'can actually fail), so there\'s nothing that scenario would show today.',
+              style: TextStyle(fontSize: 11, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

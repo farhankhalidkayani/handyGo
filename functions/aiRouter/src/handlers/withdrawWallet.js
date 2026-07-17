@@ -2,8 +2,10 @@
 // walletBalance is server-only (only ever credited by transitionBooking.js on completion), so
 // this is the only place it's ever debited. A real payout rail (bank transfer/JazzCash/etc.) is
 // out of scope for the FYP — same "instant COD settlement" simplification already used for
-// payment itself — this just zeroes the balance as if the payout succeeded.
-const { Query } = require('node-appwrite');
+// payment itself — this just zeroes the balance as if the payout succeeded, but logs it to
+// wallet_withdrawals so the Admin Finance tab has a real audit trail (plan §12 "Payments &
+// finance audit").
+const { Query, Permission, Role } = require('node-appwrite');
 const { getDatabases, DB_ID } = require('../lib/appwriteClient');
 
 module.exports = async function withdrawWallet(body, { req }) {
@@ -31,6 +33,14 @@ module.exports = async function withdrawWallet(body, { req }) {
   if (amount <= 0) return { status: 400, body: { error: 'nothing to withdraw' } };
 
   await databases.updateDocument(DB_ID, 'worker_profiles', workerProfileId, { walletBalance: 0 });
+
+  await databases.createDocument(
+    DB_ID,
+    'wallet_withdrawals',
+    'unique()',
+    { workerId: worker.userId, amount, status: 'completed' },
+    [Permission.read(Role.user(callerAuthId))]
+  ).catch(() => {});
 
   return { status: 200, body: { ok: true, withdrawn: amount } };
 };

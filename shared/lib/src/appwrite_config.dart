@@ -30,6 +30,7 @@ class Collections {
   static const messages = 'messages';
   static const notifications = 'notifications';
   static const transactions = 'transactions';
+  static const walletWithdrawals = 'wallet_withdrawals';
   static const workerLocations = 'worker_locations';
   static const sosAlerts = 'sos_alerts';
   static const fraudReports = 'fraud_reports';

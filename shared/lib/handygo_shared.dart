@@ -24,3 +24,4 @@ export 'src/models/message.dart';
 export 'src/models/fraud_report.dart';
 export 'src/models/app_notification.dart';
 export 'src/models/transaction.dart';
+export 'src/models/wallet_withdrawal.dart';

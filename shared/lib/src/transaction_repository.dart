@@ -2,6 +2,7 @@ import 'package:appwrite/appwrite.dart';
 
 import 'appwrite_config.dart';
 import 'models/transaction.dart';
+import 'models/wallet_withdrawal.dart';
 
 /// Read-only for the Admin Panel's finance audit (plan §12 "Payments & finance audit").
 /// Every transaction is server-created only (transitionBooking.js) — no client write path.
@@ -47,5 +48,15 @@ class TransactionRepository {
     if (res.documents.isEmpty) return null;
     final d = res.documents.first;
     return BookingTransaction.fromMap({...d.data, '\$id': d.$id, '\$createdAt': d.$createdAt});
+  }
+
+  /// Admin Finance tab's withdrawal log (plan §12 "Payments & finance audit").
+  Future<List<WalletWithdrawal>> listRecentWithdrawals({int limit = 100}) async {
+    final res = await databases.listDocuments(
+      databaseId: HandyGoConfig.databaseId,
+      collectionId: Collections.walletWithdrawals,
+      queries: [Query.orderDesc('\$createdAt'), Query.limit(limit)],
+    );
+    return res.documents.map((d) => WalletWithdrawal.fromMap({...d.data, '\$id': d.$id, '\$createdAt': d.$createdAt})).toList();
   }
 }
