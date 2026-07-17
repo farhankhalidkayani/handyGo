@@ -4,7 +4,11 @@ import 'package:handygo_shared/handygo_shared.dart';
 
 import '../services/app_services.dart';
 
-const _terminalStatuses = [BookingStatus.completed, BookingStatus.cancelled, BookingStatus.refunded];
+const _terminalStatuses = [
+  BookingStatus.completed,
+  BookingStatus.cancelled,
+  BookingStatus.refunded,
+];
 
 /// Plan §12 Admin Panel checklist: "Booking management (full detail + audit history +
 /// actions)" + §10.4 dispute resolution (raise a dispute off a non-terminal booking, then
@@ -57,15 +61,25 @@ class _BookingsBodyState extends State<BookingsBody> {
     });
   }
 
-  Future<void> _transition(Booking booking, BookingStatus next, {String? confirmMessage}) async {
+  Future<void> _transition(
+    Booking booking,
+    BookingStatus next, {
+    String? confirmMessage,
+  }) async {
     if (confirmMessage != null) {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           title: Text(confirmMessage),
           actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('No')),
-            FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Yes')),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('No'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Yes'),
+            ),
           ],
         ),
       );
@@ -84,6 +98,64 @@ class _BookingsBodyState extends State<BookingsBody> {
     }
   }
 
+  Future<void> _showDetail(Booking b) async {
+    final history = await AppServices.bookings.listStatusHistory(b.id);
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Booking detail'),
+        content: SizedBox(
+          width: 400,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  b.problemText,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(b.addressText),
+                Text('Category: ${b.categoryId}'),
+                if (b.finalQuote != null)
+                  Text('Quote: Rs. ${b.finalQuote!.toStringAsFixed(0)}'),
+                if (b.workSummary != null && b.workSummary!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text('Work summary: ${b.workSummary}'),
+                ],
+                const Divider(height: 24),
+                Text(
+                  'Status history',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                if (history.isEmpty)
+                  const Text('No history recorded yet.')
+                else
+                  ...history.map(
+                    (h) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        '${h['status']} — ${h['changedByRole']} · ${h['timestamp'] ?? ''}'
+                        '${(h['note'] as String?)?.isNotEmpty == true ? '\n  ${h['note']}' : ''}',
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _subscription?.close();
@@ -97,7 +169,10 @@ class _BookingsBodyState extends State<BookingsBody> {
     return Column(
       children: [
         if (_error != null)
-          Padding(padding: const EdgeInsets.all(8), child: Text(_error!, style: const TextStyle(color: Colors.red))),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Text(_error!, style: const TextStyle(color: Colors.red)),
+          ),
         Expanded(
           child: ListView.builder(
             itemCount: _bookings.length,
@@ -105,49 +180,56 @@ class _BookingsBodyState extends State<BookingsBody> {
               final b = _bookings[i];
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(b.problemText),
-                      const SizedBox(height: 4),
-                      Text('${b.addressText}\n${b.status.wire}'),
-                      if (b.finalQuote != null) Text('Rs. ${b.finalQuote!.toStringAsFixed(0)}'),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          if (b.status == BookingStatus.disputed) ...[
-                            FilledButton(
-                              onPressed: () => _transition(
-                                b,
-                                BookingStatus.refunded,
-                                confirmMessage: 'Refund this booking?',
+                child: InkWell(
+                  onTap: () => _showDetail(b),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(b.problemText),
+                        const SizedBox(height: 4),
+                        Text('${b.addressText}\n${b.status.wire}'),
+                        if (b.finalQuote != null)
+                          Text('Rs. ${b.finalQuote!.toStringAsFixed(0)}'),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            if (b.status == BookingStatus.disputed) ...[
+                              FilledButton(
+                                onPressed: () => _transition(
+                                  b,
+                                  BookingStatus.refunded,
+                                  confirmMessage: 'Refund this booking?',
+                                ),
+                                child: const Text('Refund'),
                               ),
-                              child: const Text('Refund'),
-                            ),
-                            OutlinedButton(
-                              onPressed: () => _transition(
-                                b,
-                                BookingStatus.completed,
-                                confirmMessage: 'Mark completed (no refund)?',
+                              OutlinedButton(
+                                onPressed: () => _transition(
+                                  b,
+                                  BookingStatus.completed,
+                                  confirmMessage: 'Mark completed (no refund)?',
+                                ),
+                                child: const Text('Mark completed'),
                               ),
-                              child: const Text('Mark completed'),
-                            ),
-                          ] else if (!_terminalStatuses.contains(b.status))
-                            OutlinedButton(
-                              style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
-                              onPressed: () => _transition(
-                                b,
-                                BookingStatus.disputed,
-                                confirmMessage: 'Raise a dispute on this booking?',
+                            ] else if (!_terminalStatuses.contains(b.status))
+                              OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.orange,
+                                ),
+                                onPressed: () => _transition(
+                                  b,
+                                  BookingStatus.disputed,
+                                  confirmMessage:
+                                      'Raise a dispute on this booking?',
+                                ),
+                                child: const Text('Raise dispute'),
                               ),
-                              child: const Text('Raise dispute'),
-                            ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );

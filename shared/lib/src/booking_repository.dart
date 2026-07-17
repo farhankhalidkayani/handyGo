@@ -157,6 +157,17 @@ class BookingRepository {
     return res.documents.map((d) => Booking.fromMap({...d.data, '\$id': d.$id})).toList();
   }
 
+  /// Plan §12 Admin checklist "Booking management (full detail + audit history)" — the raw
+  /// `booking_status_history` trail, oldest first so it reads as a timeline.
+  Future<List<Map<String, dynamic>>> listStatusHistory(String bookingId) async {
+    final res = await databases.listDocuments(
+      databaseId: HandyGoConfig.databaseId,
+      collectionId: Collections.bookingStatusHistory,
+      queries: [Query.equal('bookingId', bookingId), Query.orderAsc('\$createdAt'), Query.limit(100)],
+    );
+    return res.documents.map((d) => d.data).toList();
+  }
+
   Future<List<Booking>> listAllBookings({int limit = 100}) async {
     final res = await databases.listDocuments(
       databaseId: HandyGoConfig.databaseId,

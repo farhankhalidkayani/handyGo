@@ -911,7 +911,7 @@
         {
             "$id": "transactions",
             "$permissions": [
-                "read(\"users\")"
+                "read(\"team:admin\")"
             ],
             "databaseId": "handygo",
             "name": "transactions",

@@ -2,7 +2,7 @@
 // jump statuses illegally (e.g. a worker can't set `service_started` without a valid OTP).
 // This is the ONLY place `bookings.status` may be written from — clients must never write
 // status directly (§11 server-only writes for sensitive fields).
-const { Query } = require('node-appwrite');
+const { Query, Permission, Role } = require('node-appwrite');
 const { getDatabases, DB_ID } = require('../lib/appwriteClient');
 
 const TRANSITIONS = {
@@ -78,20 +78,37 @@ module.exports = async function transitionBooking(body) {
     const total = serviceCharges + materialCharges;
     const commission = Math.round(total * 0.15 * 100) / 100;
     const netToWorker = Math.round((total - commission) * 100) / 100;
-    await databases.createDocument(DB_ID, 'transactions', 'unique()', {
-      bookingId,
-      customerId: booking.customerId,
-      workerId: booking.workerId || '',
-      serviceCharges,
-      materialCharges,
-      platformFee: commission,
-      discount: 0,
-      total,
-      method: 'cod',
-      status: 'paid',
-      commission,
-      netToWorker,
-    }).catch(() => {});
+
+    // transactions only grants read("team:admin") at the collection level (financial data —
+    // no legitimate "browse everyone's transactions" need like bookings has for job
+    // discovery), so the involved customer/worker need explicit document-level read grants to
+    // see their own invoice/wallet history.
+    const involvedIds = [booking.customerId, booking.workerId].filter(Boolean);
+    const involvedUsers = involvedIds.length
+      ? await databases.listDocuments(DB_ID, 'users', [Query.equal('$id', involvedIds), Query.limit(involvedIds.length)])
+      : { documents: [] };
+    const transactionPermissions = involvedUsers.documents.map((u) => Permission.read(Role.user(u.authId)));
+
+    await databases.createDocument(
+      DB_ID,
+      'transactions',
+      'unique()',
+      {
+        bookingId,
+        customerId: booking.customerId,
+        workerId: booking.workerId || '',
+        serviceCharges,
+        materialCharges,
+        platformFee: commission,
+        discount: 0,
+        total,
+        method: 'cod',
+        status: 'paid',
+        commission,
+        netToWorker,
+      },
+      transactionPermissions
+    ).catch(() => {});
 
     // Credits the worker's wallet (plan §12 Worker checklist "Wallet + withdraw") — walletBalance
     // is server-only, same reasoning as commission/netToWorker above, so this is the only place

@@ -126,7 +126,18 @@ async function seedWorkers() {
 
 async function seedAdmin() {
   console.log('Seeding admin...');
-  await createDemoUser({ ...demo.admin, phone: '', language: 'en', role: 'admin' });
+  const { authUser } = await createDemoUser({ ...demo.admin, phone: '', language: 'en', role: 'admin' });
+  // The "admin" Appwrite Team gates read("team:admin") on analytics_daily/ai_logs (see
+  // functions/setup_admin_team.js for why this exists) — every admin account needs
+  // membership, not just the first one, so this stays correct on re-seed too.
+  const teams = new sdk.Teams(client);
+  await teams.get('admin').catch(async (e) => {
+    if (e.code !== 404) throw e;
+    await teams.create('admin', 'admin');
+  });
+  await teams.createMembership('admin', ['admin'], undefined, authUser.$id).catch((e) => {
+    if (e.code !== 409) console.error(`  admin team membership: ${e.message}`);
+  });
   console.log(`  + ${demo.admin.name} (${demo.admin.email})`);
 }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -44,6 +46,10 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
   String? _etaSource;
   bool _loadingRoute = false;
 
+  DateTime? _serviceStartedAt;
+  Timer? _timerTick;
+  Duration _elapsed = Duration.zero;
+
   @override
   void initState() {
     super.initState();
@@ -52,7 +58,11 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
     _subscription!.stream.listen((event) {
       final payload = event.payload;
       if (payload['\$id'] != widget.bookingId) return;
-      setState(() => _booking = Booking.fromMap(payload));
+      final booking = Booking.fromMap(payload);
+      setState(() => _booking = booking);
+      if (booking.status == BookingStatus.inProgress) {
+        _startServiceTimer(booking);
+      }
     });
   }
 
@@ -63,6 +73,42 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
     if ([BookingStatus.confirmed, BookingStatus.workerOnTheWay].contains(booking.status)) {
       _refreshRoute(booking);
     }
+    if (booking.status == BookingStatus.inProgress) {
+      _startServiceTimer(booking);
+    }
+  }
+
+  /// Plan §12 Worker checklist "service timer" — elapsed time since `service_started`, read
+  /// from the audit trail rather than a client-side clock so it's correct even if the worker
+  /// re-opens this screen mid-job.
+  Future<void> _startServiceTimer(Booking booking) async {
+    if (_timerTick != null) return;
+    try {
+      final history = await AppServices.bookings.listStatusHistory(booking.id);
+      final entry = history.cast<Map<String, dynamic>?>().lastWhere(
+            (h) => h?['status'] == 'in_progress',
+            orElse: () => null,
+          );
+      final startedAt = entry != null ? DateTime.tryParse(entry['timestamp'] as String? ?? '') : null;
+      if (startedAt == null || !mounted) return;
+      setState(() {
+        _serviceStartedAt = startedAt;
+        _elapsed = DateTime.now().difference(startedAt);
+      });
+      _timerTick = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted) return;
+        setState(() => _elapsed = DateTime.now().difference(_serviceStartedAt!));
+      });
+    } catch (_) {
+      // timer is a nice-to-have — never block the job on it
+    }
+  }
+
+  String _formatElapsed(Duration d) {
+    final h = d.inHours.toString().padLeft(2, '0');
+    final m = (d.inMinutes % 60).toString().padLeft(2, '0');
+    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return '$h:$m:$s';
   }
 
   /// Plan §9.8 W5 / §12 "Navigation": worker's live position -> OSRM ETA to the job address.
@@ -328,6 +374,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
   void dispose() {
     _subscription?.close();
     _otpController.dispose();
+    _timerTick?.cancel();
     super.dispose();
   }
 
@@ -482,6 +529,10 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
               const Text('Waiting for the customer to confirm & pay.'),
             if (booking.status == BookingStatus.inProgress) ...[
               const SizedBox(height: 16),
+              if (_serviceStartedAt != null)
+                Text('Service time: ${_formatElapsed(_elapsed)}',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
               if ((booking.pendingAdditionalCharge ?? 0) > 0)
                 Text(
                   'Waiting for customer to approve Rs. ${booking.pendingAdditionalCharge!.toStringAsFixed(0)} '
