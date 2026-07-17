@@ -155,6 +155,23 @@ class _OffersScreenState extends State<OffersScreen> {
                                 if (offer.etaMins != null) Text('ETA: ${offer.etaMins} mins'),
                                 if (offer.message != null && offer.message!.isNotEmpty)
                                   Text(offer.message!),
+                                if (offer.flaggedSuspicious)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Icon(Icons.warning_amber, color: Colors.orange, size: 18),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            'This quote looks unusual compared to similar jobs — double-check before accepting.',
+                                            style: TextStyle(color: Colors.orange.shade800, fontSize: 12),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 if (tags.isNotEmpty)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 8),

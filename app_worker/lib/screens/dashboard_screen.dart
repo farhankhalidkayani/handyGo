@@ -27,6 +27,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String? _error;
   int _unreadCount = 0;
   final Set<String> _declinedJobIds = {};
+  double _todayEarnings = 0;
 
   @override
   void initState() {
@@ -34,6 +35,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _worker = widget.worker;
     _refresh();
     _loadUnreadCount();
+    _loadTodayEarnings();
+  }
+
+  Future<void> _loadTodayEarnings() async {
+    try {
+      final transactions = await AppServices.transactions.listForWorkerToday(widget.profile.id);
+      final total = transactions.fold<double>(0, (sum, t) => sum + t.netToWorker);
+      if (mounted) setState(() => _todayEarnings = total);
+    } catch (_) {
+      // best-effort — dashboard still works without this
+    }
   }
 
   Future<void> _loadUnreadCount() async {
@@ -48,6 +60,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
     final refreshed = await AppServices.profiles.findWorkerProfileByUserId(widget.profile.id);
     if (mounted && refreshed != null) setState(() => _worker = refreshed);
+    _loadTodayEarnings();
   }
 
   Future<void> _openNotifications() async {
@@ -89,6 +102,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           availability: online ? 'online' : 'offline',
           rating: _worker.rating,
           jobsCompleted: _worker.jobsCompleted,
+          currentLat: _worker.currentLat,
+          currentLng: _worker.currentLng,
+          walletBalance: _worker.walletBalance,
+          pendingBalance: _worker.pendingBalance,
+          performanceScore: _worker.performanceScore,
         );
         _refresh();
       });
@@ -173,6 +191,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Text('Skills: ${_worker.skills.join(', ')}'),
               Text('Rating: ${_worker.rating.toStringAsFixed(1)} · Jobs completed: ${_worker.jobsCompleted}'),
               const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _DashboardStat(label: 'Today', value: 'Rs. ${_todayEarnings.toStringAsFixed(0)}'),
+                      _DashboardStat(label: 'Wallet', value: 'Rs. ${_worker.walletBalance.toStringAsFixed(0)}'),
+                      _DashboardStat(label: 'Performance', value: '${_worker.performanceScore}/100'),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               SwitchListTile(
                 title: const Text('Online'),
                 value: _worker.availability == 'online',
@@ -236,6 +268,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
         },
       ),
+    );
+  }
+}
+
+class _DashboardStat extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _DashboardStat({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(value, style: Theme.of(context).textTheme.titleMedium),
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+      ],
     );
   }
 }

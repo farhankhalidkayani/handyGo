@@ -44,6 +44,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
   latlong.LatLng? _workerPos;
   int? _etaMins;
   String? _etaSource;
+  int? _scheduleConflictMins;
   bool _loadingRoute = false;
 
   DateTime? _serviceStartedAt;
@@ -137,11 +138,16 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
             .catchError((_) {});
       }
       final route = (result['route'] as List?)?.cast<Map<String, dynamic>>();
+      final conflicts = (result['conflicts'] as List?)?.cast<Map<String, dynamic>>() ?? [];
       if (!mounted) return;
       setState(() {
         _workerPos = latlong.LatLng(position.latitude, position.longitude);
         _etaMins = route?.isNotEmpty == true ? (route!.first['etaMins'] as num?)?.toInt() : null;
         _etaSource = route?.isNotEmpty == true ? route!.first['etaSource'] as String? : null;
+        // §9.8 W5 schedule-overlap check — only ever populated once bookings can carry a
+        // scheduledAt time; the app doesn't yet have a "book for later" flow, so this stays
+        // empty in practice today but is wired end-to-end for when that flow exists.
+        _scheduleConflictMins = conflicts.isNotEmpty ? (conflicts.first['lateByMins'] as num?)?.toInt() : null;
       });
     } catch (_) {
       // location permission denied / OSRM unreachable — ETA is a nice-to-have, never block the job
@@ -494,6 +500,17 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                   ),
                 ],
               ),
+              if (_scheduleConflictMins != null) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.warning_amber, color: Colors.orange, size: 18),
+                    const SizedBox(width: 6),
+                    Text('Running ~$_scheduleConflictMins mins behind schedule',
+                        style: TextStyle(color: Colors.orange.shade800)),
+                  ],
+                ),
+              ],
             ],
             const SizedBox(height: 24),
             if (_error != null)

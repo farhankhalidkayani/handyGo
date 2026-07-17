@@ -19,6 +19,24 @@ class TransactionRepository {
     return res.documents.map((d) => BookingTransaction.fromMap({...d.data, '\$id': d.$id, '\$createdAt': d.$createdAt})).toList();
   }
 
+  /// Worker dashboard's "today's earnings" (plan §12 Worker checklist). Relies on the
+  /// document-level read grant transitionBooking.js sets at creation — a worker's own
+  /// session can only ever see transactions they were actually paid on.
+  Future<List<BookingTransaction>> listForWorkerToday(String workerId) async {
+    final startOfToday = DateTime.now().toUtc();
+    final midnight = DateTime.utc(startOfToday.year, startOfToday.month, startOfToday.day);
+    final res = await databases.listDocuments(
+      databaseId: HandyGoConfig.databaseId,
+      collectionId: Collections.transactions,
+      queries: [
+        Query.equal('workerId', workerId),
+        Query.greaterThanEqual('\$createdAt', midnight.toIso8601String()),
+        Query.limit(100),
+      ],
+    );
+    return res.documents.map((d) => BookingTransaction.fromMap({...d.data, '\$id': d.$id, '\$createdAt': d.$createdAt})).toList();
+  }
+
   /// The invoice for a completed booking (plan §12 "Completion → invoice → payment").
   Future<BookingTransaction?> findForBooking(String bookingId) async {
     final res = await databases.listDocuments(

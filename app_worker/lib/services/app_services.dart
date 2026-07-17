@@ -15,4 +15,5 @@ class AppServices {
   static final SosRepository sos = SosRepository(client);
   static final FraudRepository fraud = FraudRepository(client);
   static final NotificationRepository notifications = NotificationRepository(client);
+  static final TransactionRepository transactions = TransactionRepository(client);
 }

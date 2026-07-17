@@ -24,11 +24,26 @@ class _SendOfferScreenState extends State<SendOfferScreen> {
   List<String> _suggestedTools = [];
   List<String> _suggestedMaterials = [];
   String? _error;
+  int? _customerRiskScore;
 
   @override
   void initState() {
     super.initState();
     _loadSuggestion();
+    _loadCustomerRisk();
+  }
+
+  /// Plan §12 "proactive unsafe-customer warning" — `users.riskScore` is actually a trust
+  /// score despite its name (scoreEngine.js computes it as 100 minus penalties, so LOW means
+  /// risky, not high — see that file's comment), recomputed daily from cancellations/fraud
+  /// reports/SOS misuse.
+  Future<void> _loadCustomerRisk() async {
+    try {
+      final customer = await AppServices.profiles.findById(widget.booking.customerId);
+      if (mounted) setState(() => _customerRiskScore = customer?.riskScore);
+    } catch (_) {
+      // best-effort — never block offer creation on this
+    }
   }
 
   Future<void> _loadSuggestion() async {
@@ -93,6 +108,23 @@ class _SendOfferScreenState extends State<SendOfferScreen> {
           children: [
             Text(widget.booking.problemText),
             Text(widget.booking.addressText, style: const TextStyle(color: Colors.grey)),
+            if (_customerRiskScore != null && _customerRiskScore! < 50)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.warning_amber, color: Colors.red, size: 18),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'This customer has a low trust score ($_customerRiskScore/100) from past cancellations or reports — proceed carefully.',
+                        style: TextStyle(color: Colors.red.shade800, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 16),
             if (_loadingSuggestion)
               const Padding(
