@@ -42,9 +42,9 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
   final List<int> _voiceNoteBuffer = [];
   StreamSubscription<List<int>>? _voiceNoteSub;
 
-  /// Plan §12: "Service request: manual / AI chatbot / image". Auto-captioning the photo into
-  /// the AI classifier needs a vision model and isn't wired up — this attaches the photo to
-  /// the booking for the worker/admin to see, independent of the AI estimate.
+  /// Plan §12/C4: "Service request: manual / AI chatbot / image". Attaching a photo before
+  /// getting an estimate feeds it to a vision model server-side (intake.js's `captionImage`)
+  /// so the AI classifier actually sees the problem, not just whatever text is typed.
   Future<void> _attachPhoto() async {
     setState(() => _uploadingImage = true);
     try {
@@ -98,8 +98,8 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
   }
 
   Future<void> _getEstimate() async {
-    if (_problemController.text.trim().isEmpty) {
-      setState(() => _error = 'Describe the problem first');
+    if (_problemController.text.trim().isEmpty && _uploadedImageIds.isEmpty) {
+      setState(() => _error = 'Describe the problem or attach a photo first');
       return;
     }
     setState(() {
@@ -109,11 +109,18 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
     });
     try {
       final categories = await AppServices.categories.listAll();
-      final estimate = await AppServices.bookings.getAiIntake(problemText: _problemController.text.trim());
+      final estimate = await AppServices.bookings.getAiIntake(
+        problemText: _problemController.text.trim(),
+        imageFileId: _uploadedImageIds.isNotEmpty ? _uploadedImageIds.first : null,
+      );
       setState(() {
         _categories = categories;
         _estimate = estimate;
         _selectedCategoryId = estimate['categoryId'] as String?;
+        final caption = estimate['imageCaption'] as String?;
+        if (caption != null && caption.isNotEmpty && _problemController.text.trim().isEmpty) {
+          _problemController.text = caption;
+        }
       });
     } catch (e) {
       setState(() => _error = 'Could not get an AI estimate: $e');
@@ -200,6 +207,16 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
             ),
             const SizedBox(height: 16),
             if (estimate == null) ...[
+              OutlinedButton.icon(
+                onPressed: _uploadingImage ? null : _attachPhoto,
+                icon: _uploadingImage
+                    ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.add_a_photo_outlined),
+                label: Text(_uploadedImageIds.isEmpty
+                    ? 'Attach a photo (AI will look at it too)'
+                    : '${_uploadedImageIds.length} photo(s) attached — add another'),
+              ),
+              const SizedBox(height: 16),
               if (_error != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),

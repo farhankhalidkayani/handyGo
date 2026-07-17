@@ -2,15 +2,45 @@
 // rules engine is unsure (ambiguous text or Roman Urdu), then a deterministic price/duration
 // band from the matched category. Never blocks on the LLM.
 const { Query } = require('node-appwrite');
-const { getDatabases, DB_ID } = require('../lib/appwriteClient');
-const { askLLM, safeJsonParse } = require('../lib/llm');
+const { getDatabases, getStorage, DB_ID } = require('../lib/appwriteClient');
+const { askLLM, askVisionLLM, safeJsonParse } = require('../lib/llm');
 
 const FALLBACK_SOLUTION = 'A verified worker will assess and fix the issue.';
 
+// C4: photo -> one-sentence description via a vision-capable Groq model (still zero-cost —
+// Groq's free tier includes vision). Fetches bytes server-side with the API key so this works
+// regardless of the file's own Storage permissions, rather than needing a public URL.
+async function captionImage(imageFileId) {
+  try {
+    const storage = getStorage();
+    const [meta, bytes] = await Promise.all([
+      storage.getFile('problem_media', imageFileId),
+      storage.getFileView('problem_media', imageFileId),
+    ]);
+    const base64 = Buffer.from(bytes).toString('base64');
+    const dataUrl = `data:${meta.mimeType};base64,${base64}`;
+    const out = await askVisionLLM(
+      'Describe the home-service problem shown in this photo in one short sentence (e.g. '
+        + '"leaking pipe under a kitchen sink" or "cracked ceramic floor tile"). Reply with '
+        + 'just the sentence, no preamble.',
+      dataUrl
+    );
+    return out.tier === 'llm' ? out.text?.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
 module.exports = async function intake(body, { log }) {
   const start = Date.now();
-  const { problemText = '', lat, lng, imageCaption } = body;
-  if (!problemText.trim()) return { status: 400, body: { error: 'problemText is required' } };
+  const { problemText = '', lat, lng, imageFileId } = body;
+  let { imageCaption } = body;
+  if (!problemText.trim() && !imageFileId) {
+    return { status: 400, body: { error: 'problemText or imageFileId is required' } };
+  }
+  if (imageFileId && !imageCaption) {
+    imageCaption = await captionImage(imageFileId);
+  }
 
   const databases = getDatabases();
   const categoriesRes = await databases.listDocuments(DB_ID, 'service_categories', [Query.limit(100)]);
@@ -66,6 +96,7 @@ Return JSON only: {"category":"...","confidence":0-1,"urgency":"low|normal|high|
     urgency,
     solution,
     confidence,
+    imageCaption: imageCaption || null,
   };
 
   await databases.createDocument(DB_ID, 'ai_logs', 'unique()', {

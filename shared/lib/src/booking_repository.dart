@@ -301,12 +301,14 @@ class BookingRepository {
     double? lat,
     double? lng,
     String? imageCaption,
+    String? imageFileId,
   }) {
     return aiRouter.call('intake', {
       'problemText': problemText,
       if (lat != null) 'lat': lat,
       if (lng != null) 'lng': lng,
       if (imageCaption != null) 'imageCaption': imageCaption,
+      if (imageFileId != null) 'imageFileId': imageFileId,
     });
   }
 

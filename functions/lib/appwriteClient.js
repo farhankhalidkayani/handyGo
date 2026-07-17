@@ -15,4 +15,8 @@ function getDatabases() {
   return new sdk.Databases(getClient());
 }
 
-module.exports = { sdk, getClient, getDatabases, DB_ID };
+function getStorage() {
+  return new sdk.Storage(getClient());
+}
+
+module.exports = { sdk, getClient, getDatabases, getStorage, DB_ID };
