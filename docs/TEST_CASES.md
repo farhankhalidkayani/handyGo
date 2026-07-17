@@ -321,6 +321,40 @@ succeed against a real throwaway booking (cleaned up after).
 
 ---
 
+## 2o. Worker wallet + withdraw + AI performance tips
+
+Verified live end-to-end: a real `completed` transition credits `worker_profiles.
+walletBalance` by `netToWorker` (1000 total, 15% commission → +850 confirmed); withdraw
+zeroes it; a worker attempting to withdraw a different worker's wallet is rejected (403).
+
+| # | Test | App | Steps | Expected | Status |
+|---|---|---|---|---|---|
+| 2o.1 | Wallet credits on completion | — | Complete a booking (customer confirms & pays) | The assigned worker's `walletBalance` increases by `total - 15% commission` | ✅ (scripted) |
+| 2o.2 | Wallet screen shows the balance | Worker | Dashboard → wallet icon | Available balance, pending balance, performance score, rating, jobs completed all shown | 🔲 |
+| 2o.3 | Withdraw | Worker | Wallet screen → "Withdraw" → confirm | Balance shown goes to Rs. 0; confirmation message shown | ✅ (scripted) / 🔲 (UI) |
+| 2o.4 | Withdraw is disabled at zero balance | Worker | Wallet screen with a Rs. 0 balance | "Withdraw" button is disabled, not just a no-op | 🔲 |
+| 2o.5 | A worker can't withdraw someone else's wallet | — | Call `withdrawWallet` with a `workerProfileId` that isn't the caller's own | 403 rejected | ✅ (scripted) |
+| 2o.6 | Performance tip shown | Worker | Wallet screen | A tip card appears — rules-based for very high/low scores, LLM-phrased for the mixed middle, never blocks the screen if the AI call fails | 🔲 |
+
+---
+
+## 2p. Safety Center, invoice, home screen, call buttons, admin ops map/finance/insights
+
+| # | Test | App | Steps | Expected | Status |
+|---|---|---|---|---|---|
+| 2p.1 | Safety Center reachable | Customer/Worker | Home/Dashboard → shield icon | Safety tips, "Report fraud" link, and the SOS press-and-hold button all present | 🔲 |
+| 2p.2 | Invoice shows after payment | Customer | Complete a booking → rating screen | Invoice card shows service charges/materials/total before the star rating | 🔲 |
+| 2p.3 | Home shows popular services | Customer | Home screen | Horizontal chip row of categories; tapping one opens manual booking pre-filled with that category | 🔲 |
+| 2p.4 | Home shows previous bookings | Customer | Home screen, after at least one completed/cancelled booking | Up to 5 past bookings listed; an unrated completed one shows a star icon and opens the rating screen | 🔲 |
+| 2p.5 | Customer can call the worker | Customer | Tracking screen, once a worker is assigned → call icon | Opens the device dialer with the worker's number, or a friendly error if none on file | 🔲 |
+| 2p.6 | Worker can call the customer | Worker | Active Job screen → call icon | Same as 2p.5, for the customer's number | 🔲 |
+| 2p.7 | Worker can decline an open job | Worker | Dashboard, open jobs list → ✕ on a job | Job disappears from this worker's list only (client-side, doesn't touch the booking — other workers still see it) | 🔲 |
+| 2p.8 | Admin live operations map | Admin | Map tab | Markers for every non-terminal booking (colored by status) and every open SOS alert (red) | 🔲 |
+| 2p.9 | Admin finance audit | Admin | Finance tab | Total revenue/commission/paid-to-workers stat cards + a list of individual transactions | 🔲 |
+| 2p.10 | Admin AI Insights | Admin | Insights tab | Flagged chat messages and workers with `performanceScore < 60` shown as cards; empty states are friendly, not blank | 🔲 |
+
+---
+
 ## 4. Known gaps (not yet built — don't file these as bugs)
 
 Auto image-captioning into the AI classifier and voice-note transcription (both photo and
@@ -329,7 +363,17 @@ tiered-AI-cost notes (a vision/STT model is a separate cost tier). Worker-shorta
 clustering on the analytics dashboard is stubbed but not implemented (§2i.4) — needs
 geographic clustering of demand vs. online worker coverage. `recommendWorkers`'s original
 C5 mode (ranking nearby workers for a customer, distinct from the now-built C6 offer
-comparison — §2j) is implemented server-side but not yet called from any UI. Cloud LLM
-(Groq) is configured and confirmed live (§2b) — §0.6's fallback-ladder behavior still
+comparison — §2j) is implemented server-side but not yet called from any UI, since the
+current matching model is worker-initiated offers rather than customer-browsed rankings.
+A live "service timer" during `in_progress` and an in-app "ask a question before offering"
+path are not built (chat is scoped to bookings that already have a worker assigned). Cloud
+LLM (Groq) is configured and confirmed live (§2b) — §0.6's fallback-ladder behavior still
 applies if Groq itself is ever unreachable/rate-limited, just isn't the current normal path
 anymore.
+
+**Known security note (pre-existing, not introduced this session):** `bookings` and
+`transactions` grant collection-level `read("users")`, meaning any authenticated user (not
+just the involved customer/worker/admin) can query all documents in these collections —
+document-level permissions were never set at creation time to narrow this. Not a blocker for
+demo/FYP testing, but should be tightened (e.g. `_ownerPermissions`-style scoping, same
+pattern already used on `customer_profiles`/`worker_profiles`) before any real deployment.
