@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:handygo_shared/handygo_shared.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../services/app_services.dart';
 import 'offers_screen.dart';
@@ -29,6 +30,26 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
   Map<String, dynamic>? _estimate;
   String? _selectedCategoryId;
   List<ServiceCategory> _categories = [];
+  final List<String> _uploadedImageIds = [];
+  bool _uploadingImage = false;
+
+  /// Plan §12: "Service request: manual / AI chatbot / image". Auto-captioning the photo into
+  /// the AI classifier needs a vision model and isn't wired up — this attaches the photo to
+  /// the booking for the worker/admin to see, independent of the AI estimate.
+  Future<void> _attachPhoto() async {
+    setState(() => _uploadingImage = true);
+    try {
+      final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 80);
+      if (picked == null) return;
+      final bytes = await picked.readAsBytes();
+      final fileId = await AppServices.media.uploadImage(bytes: bytes, filename: picked.name);
+      setState(() => _uploadedImageIds.add(fileId));
+    } catch (e) {
+      setState(() => _error = 'Could not attach photo: $e');
+    } finally {
+      if (mounted) setState(() => _uploadingImage = false);
+    }
+  }
 
   Future<void> _getEstimate() async {
     if (_problemController.text.trim().isEmpty) {
@@ -80,6 +101,7 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
         customerId: widget.profile.id,
         categoryId: _selectedCategoryId!,
         problemText: _problemController.text.trim(),
+        problemImages: _uploadedImageIds,
         addressText: _addressController.text.trim(),
         lat: lat,
         lng: lng,
@@ -176,6 +198,16 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
                     ],
                   ),
                 ),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: _uploadingImage ? null : _attachPhoto,
+                icon: _uploadingImage
+                    ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.add_a_photo_outlined),
+                label: Text(_uploadedImageIds.isEmpty
+                    ? 'Attach a photo'
+                    : '${_uploadedImageIds.length} photo(s) attached — add another'),
               ),
               const SizedBox(height: 16),
               TextField(

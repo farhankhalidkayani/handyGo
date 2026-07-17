@@ -21,7 +21,7 @@ module.exports = async function updateSosStatus(body, { req }) {
     return { status: 403, body: { error: 'admin role required' } };
   }
 
-  const { sosAlertId, adminStatus, action } = body;
+  const { sosAlertId, adminStatus, action, suspendUserId } = body;
   if (!sosAlertId || !ALLOWED.includes(adminStatus)) {
     return { status: 400, body: { error: `sosAlertId and adminStatus (one of ${ALLOWED.join(', ')}) are required` } };
   }
@@ -45,6 +45,13 @@ module.exports = async function updateSosStatus(body, { req }) {
     adminStatus,
     timeline: JSON.stringify(timeline),
   });
+
+  // Suspend (plan §10.3 SOS Control Center action set) — only ever the counterpart on this
+  // specific alert, never an arbitrary user id, so an admin can't be tricked into suspending
+  // someone unrelated to the incident.
+  if (suspendUserId && [alert.raisedById, alert.counterpartId].includes(suspendUserId)) {
+    await databases.updateDocument(DB_ID, 'users', suspendUserId, { status: 'suspended' }).catch(() => {});
+  }
 
   return { status: 200, body: { ok: true, sosAlertId, adminStatus } };
 };

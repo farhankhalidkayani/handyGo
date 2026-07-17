@@ -1,6 +1,7 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
 import 'package:handygo_shared/handygo_shared.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../services/app_services.dart';
 
@@ -12,9 +13,8 @@ const _riskColors = {
 };
 
 /// Plan §10.3: "Admin SOS Control Center — red banner + incident timeline + actions (...
-/// Mark Safe, Close)". Full action set (Open Live Location, Call parties, Pause Booking,
-/// Block Payment, Cancel, Suspend) is a follow-up; this covers acknowledge/in-progress/mark
-/// safe/close, which already exercises the real state machine end-to-end.
+/// Mark Safe, Close)". Open Live Location/Pause Booking/Block Payment/Cancel are still a
+/// follow-up; this now covers acknowledge/in-progress/mark safe/close/call/suspend.
 class SosControlCenterBody extends StatefulWidget {
   const SosControlCenterBody({super.key});
 
@@ -67,6 +67,53 @@ class _SosControlCenterBodyState extends State<SosControlCenterBody> {
       await AppServices.sos.updateStatus(sosAlertId: alert.id, adminStatus: status);
     } catch (e) {
       setState(() => _error = 'Action failed: $e');
+    }
+  }
+
+  Future<void> _callRaiser(SosAlert alert) async {
+    setState(() => _error = null);
+    try {
+      final raiser = await AppServices.profiles.findById(alert.raisedById);
+      final phone = raiser?.phone;
+      if (phone == null || phone.isEmpty) {
+        setState(() => _error = 'No phone number on file for this user');
+        return;
+      }
+      final uri = Uri(scheme: 'tel', path: phone);
+      if (!await launchUrl(uri)) {
+        setState(() => _error = 'Could not launch phone dialer');
+      }
+    } catch (e) {
+      setState(() => _error = 'Call failed: $e');
+    }
+  }
+
+  Future<void> _suspendCounterpart(SosAlert alert) async {
+    if (alert.counterpartId == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Suspend this account?'),
+        content: const Text('This immediately blocks the counterpart from using the app.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Suspend')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _error = null);
+    try {
+      await AppServices.sos.updateStatus(
+        sosAlertId: alert.id,
+        adminStatus: alert.adminStatus,
+        action: 'Suspended counterpart account',
+        suspendUserId: alert.counterpartId,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account suspended.')));
+    } catch (e) {
+      setState(() => _error = 'Suspend failed: $e');
     }
   }
 
@@ -147,6 +194,17 @@ class _SosControlCenterBodyState extends State<SosControlCenterBody> {
                               onPressed: () => _updateStatus(a, 'closed'),
                               child: const Text('Close'),
                             ),
+                            OutlinedButton.icon(
+                              onPressed: () => _callRaiser(a),
+                              icon: const Icon(Icons.call, size: 16),
+                              label: const Text('Call raiser'),
+                            ),
+                            if (a.counterpartId != null)
+                              OutlinedButton(
+                                style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                                onPressed: () => _suspendCounterpart(a),
+                                child: const Text('Suspend counterpart'),
+                              ),
                           ],
                         ),
                       ],

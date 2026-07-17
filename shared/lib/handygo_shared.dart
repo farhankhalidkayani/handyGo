@@ -11,6 +11,7 @@ export 'src/offer_repository.dart';
 export 'src/message_repository.dart';
 export 'src/sos_repository.dart';
 export 'src/fraud_repository.dart';
+export 'src/media_repository.dart';
 export 'src/models/user_profile.dart';
 export 'src/models/booking.dart';
 export 'src/models/worker_offer.dart';

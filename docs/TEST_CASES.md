@@ -214,13 +214,32 @@ requested (see `requestAdditionalCharge.js`/`approveAdditionalCharge.js`).
 
 ---
 
+## 2h. Photo attachment + more SOS Control Center actions
+
+Verified live: a real customer session (not the API key) can upload directly to the
+`problem_media` bucket, and the admin-gated suspend action correctly updates a real user's
+`users.status` (tested against a live seeded account, then restored back to `active`
+afterward).
+
+| # | Test | App | Steps | Expected | Status |
+|---|---|---|---|---|---|
+| 2h.1 | Attach a photo | Customer | AI intake screen, after getting an estimate → "Attach a photo" → pick an image | Button label updates to show photo count; upload happens in the background | 🔲 |
+| 2h.2 | Photo persists on the booking | Customer | Complete booking creation after 2h.1 | `bookings.problemImages` contains the uploaded file id(s) | ✅ (upload path scripted; full booking-attach flow not yet scripted) |
+| 2h.3 | Photo upload never blocks booking | Customer | Attempt to book without attaching a photo | Booking still creates normally — photo attachment is optional | 🔲 |
+| 2h.4 | Admin calls the SOS raiser | Admin | SOS tab → any alert → "Call raiser" | Opens the device's phone dialer with the raiser's number (if one is on file); shows an error if no phone number exists | 🔲 |
+| 2h.5 | Admin suspends the counterpart | Admin | SOS tab → any alert with a `counterpartId` → "Suspend counterpart" → confirm | Confirmation dialog, then the counterpart's `users.status` → `suspended` immediately; a timeline entry is added to the alert | ✅ (scripted) / 🔲 (UI) |
+| 2h.6 | Suspend only ever targets this alert's parties | — | Inspect `updateSosStatus.js` | `suspendUserId` is only honored if it equals the alert's own `raisedById` or `counterpartId` — an admin (or a compromised client) can't be tricked into suspending an unrelated user id | ✅ (code review) |
+
+---
+
 ## 4. Known gaps (not yet built — don't file these as bugs)
 
 Live map/ETA rendering, dispute resolution flow (distinct from a plain cancel, which is built —
-§2g), photo/voice problem intake (text-only AI intake is done — §2b), and the full SOS Control
-Center action set (Open Live Location, Call parties, Pause Booking, Block Payment, Cancel,
-Suspend — only Acknowledge/In progress/Mark safe/Close are built, §2d) — these are Phase 3+ per
-the plan's phase ordering (§13). Additional-charge approval and booking cancellation are now
+§2g), voice problem intake / auto image-captioning into the AI classifier (photo attachment
+itself is built — §2h), and the rest of the SOS Control Center action set (Open Live Location,
+Pause Booking, Block Payment, Cancel — Acknowledge/In progress/Mark safe/Close/Call/Suspend are
+built, §2d/§2h) — these are Phase 3+ per the plan's phase ordering (§13). Additional-charge
+approval and booking cancellation are now
 built (§2g). Fraud reporting is now built (§2e). Cloud LLM (Groq) is now configured and
 confirmed live (§2b) — §0.6's fallback-ladder behavior still applies if Groq
 itself is ever unreachable/rate-limited, just isn't the current normal path anymore.

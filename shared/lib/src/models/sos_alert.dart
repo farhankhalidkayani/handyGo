@@ -5,6 +5,7 @@ class SosAlert {
   final String? bookingId;
   final String raisedByRole;
   final String raisedById;
+  final String? counterpartId;
   final String emergencyType;
   final double? lat;
   final double? lng;
@@ -18,6 +19,7 @@ class SosAlert {
     this.bookingId,
     required this.raisedByRole,
     required this.raisedById,
+    this.counterpartId,
     required this.emergencyType,
     this.lat,
     this.lng,
@@ -32,6 +34,7 @@ class SosAlert {
         bookingId: map['bookingId'] as String?,
         raisedByRole: map['raisedByRole'] as String,
         raisedById: map['raisedById'] as String,
+        counterpartId: map['counterpartId'] as String?,
         emergencyType: map['emergencyType'] as String,
         lat: (map['lat'] as num?)?.toDouble(),
         lng: (map['lng'] as num?)?.toDouble(),

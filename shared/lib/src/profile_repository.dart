@@ -23,6 +23,19 @@ class ProfileRepository {
     return UserProfile.fromMap(res.documents.first.data..addAll({'\$id': res.documents.first.$id}));
   }
 
+  Future<UserProfile?> findById(String userId) async {
+    try {
+      final doc = await databases.getDocument(
+        databaseId: HandyGoConfig.databaseId,
+        collectionId: Collections.users,
+        documentId: userId,
+      );
+      return UserProfile.fromMap({...doc.data, '\$id': doc.$id});
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Documents get owner-only write permission (in addition to the broad collection-level
   /// read) so e.g. a worker can toggle their own availability directly from the client —
   /// everything else (status transitions, verification, scores) still only writable via the

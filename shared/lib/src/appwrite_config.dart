@@ -36,3 +36,8 @@ class Collections {
   static const aiLogs = 'ai_logs';
   static const analyticsDaily = 'analytics_daily';
 }
+
+/// Storage bucket ids — must match appwrite.json exactly.
+class Buckets {
+  static const problemMedia = 'problem_media';
+}

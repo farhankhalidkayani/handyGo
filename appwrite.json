@@ -1398,5 +1398,30 @@
                 }
             ]
         }
+    ],
+    "buckets": [
+        {
+            "$id": "problem_media",
+            "name": "problem_media",
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"users\")"
+            ],
+            "fileSecurity": true,
+            "enabled": true,
+            "maximumFileSize": 10000000,
+            "allowedFileExtensions": [
+                "jpg",
+                "jpeg",
+                "png",
+                "webp",
+                "m4a",
+                "mp3",
+                "wav"
+            ],
+            "compression": "gzip",
+            "encryption": true,
+            "antivirus": false
+        }
     ]
 }

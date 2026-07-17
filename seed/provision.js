@@ -20,6 +20,7 @@ if (!PROJECT || !API_KEY) {
 
 const client = new sdk.Client().setEndpoint(ENDPOINT).setProject(PROJECT).setKey(API_KEY);
 const databases = new sdk.Databases(client);
+const storage = new sdk.Storage(client);
 
 const config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'appwrite.json'), 'utf8'));
 
@@ -114,6 +115,48 @@ async function createIndex(dbId, collectionId, index) {
     }
     for (const index of col.indexes || []) {
       await createIndex(col.databaseId, col.$id, index);
+    }
+  }
+
+  for (const bucket of config.buckets || []) {
+    console.log(`Bucket: ${bucket.$id}`);
+    const created = await storage
+      .createBucket(
+        bucket.$id,
+        bucket.name,
+        bucket.$permissions,
+        bucket.fileSecurity,
+        bucket.enabled,
+        bucket.maximumFileSize,
+        bucket.allowedFileExtensions,
+        bucket.compression,
+        bucket.encryption,
+        bucket.antivirus
+      )
+      .then(() => true)
+      .catch((e) => {
+        if (e.code !== 409) throw e;
+        return false;
+      });
+
+    if (created) {
+      console.log(`  + ${bucket.$id}`);
+    } else {
+      await storage
+        .updateBucket(
+          bucket.$id,
+          bucket.name,
+          bucket.$permissions,
+          bucket.fileSecurity,
+          bucket.enabled,
+          bucket.maximumFileSize,
+          bucket.allowedFileExtensions,
+          bucket.compression,
+          bucket.encryption,
+          bucket.antivirus
+        )
+        .then(() => console.log(`  = ${bucket.$id} (synced permissions/settings)`))
+        .catch((e) => console.error(`  ! ${bucket.$id} sync failed: ${e.message}`));
     }
   }
 

@@ -68,11 +68,13 @@ class SosRepository {
     required String sosAlertId,
     required String adminStatus,
     String? action,
+    String? suspendUserId,
   }) {
     return aiRouter.call('updateSosStatus', {
       'sosAlertId': sosAlertId,
       'adminStatus': adminStatus,
       if (action != null) 'action': action,
+      if (suspendUserId != null) 'suspendUserId': suspendUserId,
     });
   }
 
