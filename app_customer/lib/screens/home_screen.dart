@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:handygo_shared/handygo_shared.dart';
 
 import '../services/app_services.dart';
@@ -25,6 +26,9 @@ class _HomeScreenState extends State<HomeScreen> {
   late Future<List<ServiceCategory>> _categoriesFuture;
   late Future<List<Booking>> _historyFuture;
   int _unreadCount = 0;
+  String? _locationLabel;
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -33,6 +37,24 @@ class _HomeScreenState extends State<HomeScreen> {
     _categoriesFuture = AppServices.categories.listAll();
     _historyFuture = AppServices.bookings.listForCustomer(widget.profile.id);
     _loadUnreadCount();
+    _loadLocation();
+  }
+
+  /// Plan §12 Customer checklist "Home: location, search, ...". Reverse-geocoding to a
+  /// street address needs a geocoding API/package that isn't in this project (zero-cost
+  /// scope) — shows raw coordinates instead, same simplification used for lat/lng elsewhere.
+  Future<void> _loadLocation() async {
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.low),
+      );
+      if (mounted) {
+        setState(() => _locationLabel =
+            '${position.latitude.toStringAsFixed(3)}, ${position.longitude.toStringAsFixed(3)}');
+      }
+    } catch (_) {
+      // location is a nice-to-have display — never block the home screen on it
+    }
   }
 
   void _openCategory(ServiceCategory category) {
@@ -49,6 +71,25 @@ class _HomeScreenState extends State<HomeScreen> {
         MaterialPageRoute(builder: (_) => RatingScreen(profile: widget.profile, bookingId: booking.id)),
       );
     }
+  }
+
+  /// "Recommended for you" — a customer's own most-booked category, distinct from "Popular"
+  /// (all categories) and "Previous bookings" (a plain history list). Falls back to whatever
+  /// category this customer hasn't tried yet if they have no history at all.
+  List<ServiceCategory> _recommendedCategories(List<ServiceCategory> categories, List<Booking> history) {
+    if (categories.isEmpty) return [];
+    final counts = <String, int>{};
+    for (final b in history) {
+      counts[b.categoryId] = (counts[b.categoryId] ?? 0) + 1;
+    }
+    final sorted = [...categories]..sort((a, b) => (counts[b.id] ?? 0).compareTo(counts[a.id] ?? 0));
+    return sorted.where((c) => (counts[c.id] ?? 0) > 0).take(3).toList();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadUnreadCount() async {
@@ -151,6 +192,27 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.all(24),
         children: [
           Text('Welcome, ${widget.profile.name}', style: Theme.of(context).textTheme.headlineSmall),
+          if (_locationLabel != null) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                const SizedBox(width: 4),
+                Text(_locationLabel!, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+              ],
+            ),
+          ],
+          const SizedBox(height: 16),
+          TextField(
+            controller: _searchController,
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.search),
+              hintText: 'Search for a service...',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+            onChanged: (v) => setState(() => _searchQuery = v.trim().toLowerCase()),
+          ),
           const SizedBox(height: 24),
           FutureBuilder<Booking?>(
             future: _activeBookingFuture,
@@ -174,24 +236,63 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 8),
           OutlinedButton(onPressed: _requestServiceManually, child: const Text('Pick a category manually')),
           const SizedBox(height: 32),
-          Text('Popular services', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
           FutureBuilder<List<ServiceCategory>>(
             future: _categoriesFuture,
-            builder: (context, snapshot) {
-              final categories = snapshot.data;
-              if (categories == null || categories.isEmpty) return const SizedBox.shrink();
-              return SizedBox(
-                height: 48,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: categories.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 8),
-                  itemBuilder: (context, i) {
-                    final c = categories[i];
-                    return ActionChip(label: Text(c.name), onPressed: () => _openCategory(c));
-                  },
-                ),
+            builder: (context, catSnapshot) {
+              final categories = catSnapshot.data ?? [];
+              return FutureBuilder<List<Booking>>(
+                future: _historyFuture,
+                builder: (context, historySnapshot) {
+                  final history = historySnapshot.data ?? [];
+                  final recommended = _recommendedCategories(categories, history);
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (recommended.isNotEmpty) ...[
+                        Text('Recommended for you', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          height: 48,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: recommended.length,
+                            separatorBuilder: (_, _) => const SizedBox(width: 8),
+                            itemBuilder: (context, i) {
+                              final c = recommended[i];
+                              return ActionChip(
+                                avatar: const Icon(Icons.star, size: 16, color: Colors.amber),
+                                label: Text(c.name),
+                                onPressed: () => _openCategory(c),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                      Text('Popular services', style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      Builder(builder: (context) {
+                        final filtered = _searchQuery.isEmpty
+                            ? categories
+                            : categories.where((c) => c.name.toLowerCase().contains(_searchQuery)).toList();
+                        if (categories.isEmpty) return const SizedBox.shrink();
+                        if (filtered.isEmpty) return const Text('No matching services.');
+                        return SizedBox(
+                          height: 48,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: filtered.length,
+                            separatorBuilder: (_, _) => const SizedBox(width: 8),
+                            itemBuilder: (context, i) {
+                              final c = filtered[i];
+                              return ActionChip(label: Text(c.name), onPressed: () => _openCategory(c));
+                            },
+                          ),
+                        );
+                      }),
+                    ],
+                  );
+                },
               );
             },
           ),
