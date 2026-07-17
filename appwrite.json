@@ -749,6 +749,7 @@
         {
             "$id": "messages",
             "$permissions": [
+                "create(\"users\")",
                 "read(\"users\")"
             ],
             "databaseId": "handygo",

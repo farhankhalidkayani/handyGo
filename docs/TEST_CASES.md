@@ -96,6 +96,28 @@ Urdu/Roman Urdu phrasings (2b.2) rather than assuming it's fixed.
 
 ---
 
+## 2c. In-booking chat (customer ↔ worker) + auto-translate/flagging
+
+Verified live with a scripted message (not through the UI yet): creating a `messages` document
+correctly triggers `eventRouter`'s `translate` handler within ~5-10s (event executions are
+async — don't check/clean up test data too quickly, a race condition here initially looked
+like a broken handler when it was actually a test-script timing bug).
+
+**Known quality issue found:** when the message is already in the recipient's language (e.g.
+both parties set to English), the translate prompt sometimes gets answered conversationally by
+the LLM instead of returned verbatim as "no-op translation" — worth a closer look at the prompt
+in `functions/eventRouter/src/handlers/translate.js` if this shows up often in real usage.
+
+| # | Test | App | Steps | Expected | Status |
+|---|---|---|---|---|---|
+| 2c.1 | Send a message | Customer/Worker | Tracking screen (customer) or Active Job screen (worker) → chat icon → type + send | Message appears immediately in the sender's own view | 🔲 |
+| 2c.2 | Message appears live for the other party | Customer + Worker | Watch the other party's chat screen without refreshing while 2c.1 happens | Message appears within ~1-2s (realtime) | 🔲 |
+| 2c.3 | Translation appears | Customer/Worker | Send a message in a language different from the recipient's `users.language` | Within ~5-10s, an italicized translated line appears under the original message for the recipient | 🔲 |
+| 2c.4 | External-payment flag | Customer/Worker | Send a message mentioning "jazzcash number" / "send money" / "outside app" | Within ~5-10s, the message bubble turns red-tinted with a "⚠ possible external payment / abusive content" note; an admin notification is created (`eventRouter`'s translate handler, verified live via script) | ✅ (scripted) / 🔲 (UI) |
+| 2c.5 | Flag is never client-controlled | — | Inspect `message_repository.dart`'s `sendMessage` | Creates with `permissions: []` — sender can never set `aiFlagged`/`translatedText` themselves, only `eventRouter` (server-side) can | ✅ (code review) |
+
+---
+
 ## 3. Security / permission checks
 
 These matter more than they look — Appwrite's default document permissions are easy to get

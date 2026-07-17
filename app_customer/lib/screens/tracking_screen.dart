@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:handygo_shared/handygo_shared.dart';
 
 import '../services/app_services.dart';
+import 'chat_screen.dart';
 import 'rating_screen.dart';
 
 const _statusLabels = {
@@ -102,7 +103,23 @@ class _TrackingScreenState extends State<TrackingScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tracking')),
+      appBar: AppBar(
+        title: const Text('Tracking'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ChatScreen(
+                  bookingId: widget.bookingId,
+                  senderId: widget.profile.id,
+                  senderRole: 'customer',
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(

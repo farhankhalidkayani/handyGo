@@ -1,0 +1,157 @@
+import 'package:appwrite/appwrite.dart';
+import 'package:flutter/material.dart';
+import 'package:handygo_shared/handygo_shared.dart';
+
+import '../services/app_services.dart';
+
+/// Plan §12: chat between customer and worker on an active booking. Auto-translation and
+/// abuse/external-payment flagging happen server-side via eventRouter's `translate` handler
+/// (§9.5), triggered automatically on message create — this screen only ever reads/creates
+/// messages, never touches translatedText/aiFlagged directly.
+class ChatScreen extends StatefulWidget {
+  final String bookingId;
+  final String senderId;
+  final String senderRole; // 'customer' | 'worker'
+
+  const ChatScreen({super.key, required this.bookingId, required this.senderId, required this.senderRole});
+
+  @override
+  State<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen> {
+  final _messages = <Message>[];
+  final _textController = TextEditingController();
+  RealtimeSubscription? _subscription;
+  bool _loading = true;
+  bool _sending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    _subscription = AppServices.messages.subscribeToMessages();
+    _subscription!.stream.listen((event) {
+      final payload = event.payload;
+      if (payload['bookingId'] != widget.bookingId) return;
+      final message = Message.fromMap(payload);
+      setState(() {
+        final i = _messages.indexWhere((m) => m.id == message.id);
+        if (i != -1) {
+          _messages[i] = message; // translation/flag update arriving after the create event
+        } else {
+          _messages.add(message);
+        }
+      });
+    });
+  }
+
+  Future<void> _load() async {
+    final messages = await AppServices.messages.listForBooking(widget.bookingId);
+    if (!mounted) return;
+    setState(() {
+      _messages
+        ..clear()
+        ..addAll(messages);
+      _loading = false;
+    });
+  }
+
+  Future<void> _send() async {
+    final text = _textController.text.trim();
+    if (text.isEmpty) return;
+    setState(() => _sending = true);
+    _textController.clear();
+    try {
+      await AppServices.messages.sendMessage(
+        bookingId: widget.bookingId,
+        senderId: widget.senderId,
+        senderRole: widget.senderRole,
+        text: text,
+      );
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _subscription?.close();
+    _textController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Chat')),
+      body: Column(
+        children: [
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, i) {
+                      final m = _messages[i];
+                      final isMine = m.senderId == widget.senderId;
+                      return Align(
+                        alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          constraints: const BoxConstraints(maxWidth: 320),
+                          decoration: BoxDecoration(
+                            color: m.aiFlagged
+                                ? Colors.red.withValues(alpha: 0.15)
+                                : isMine
+                                    ? Theme.of(context).colorScheme.primaryContainer
+                                    : Theme.of(context).colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(m.text),
+                              if (!isMine && m.translatedText != null && m.translatedText != m.text) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  m.translatedText!,
+                                  style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
+                                ),
+                              ],
+                              if (m.aiFlagged) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  '⚠ ${m.flagReason ?? "flagged for review"}',
+                                  style: const TextStyle(fontSize: 11, color: Colors.red),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _textController,
+                    decoration: const InputDecoration(hintText: 'Message... (never share payment details here)'),
+                    onSubmitted: (_) => _send(),
+                  ),
+                ),
+                IconButton(icon: const Icon(Icons.send), onPressed: _sending ? null : _send),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

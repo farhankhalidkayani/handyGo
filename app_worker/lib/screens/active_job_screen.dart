@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:handygo_shared/handygo_shared.dart';
 
 import '../services/app_services.dart';
+import 'chat_screen.dart';
 
 /// Drives the worker's side of the booking state machine (plan §7): confirmed ->
 /// worker_on_the_way -> worker_arrived -> (OTP) service_started -> in_progress ->
@@ -120,7 +121,23 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
     final awaitingOtp = booking.status == BookingStatus.workerArrived;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Active job')),
+      appBar: AppBar(
+        title: const Text('Active job'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ChatScreen(
+                  bookingId: widget.bookingId,
+                  senderId: widget.profile.id,
+                  senderRole: 'worker',
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
