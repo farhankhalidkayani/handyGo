@@ -547,6 +547,18 @@
                     "default": 0
                 },
                 {
+                    "key": "pendingAdditionalCharge",
+                    "type": "double",
+                    "required": false,
+                    "default": 0
+                },
+                {
+                    "key": "pendingAdditionalChargeReason",
+                    "type": "string",
+                    "size": 500,
+                    "required": false
+                },
+                {
                     "key": "status",
                     "type": "string",
                     "size": 24,

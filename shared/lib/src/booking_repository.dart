@@ -167,6 +167,36 @@ class BookingRepository {
     });
   }
 
+  /// Plan §14.2 demo script: "worker requests Rs. 500 material -> customer approves". The
+  /// amount is stored server-side on the booking (pendingAdditionalCharge) rather than
+  /// trusted from the client at approval time — see requestAdditionalCharge.js/
+  /// approveAdditionalCharge.js for why.
+  Future<Map<String, dynamic>> requestAdditionalCharge({
+    required String bookingId,
+    required String workerId,
+    required double amount,
+    String? reason,
+  }) {
+    return aiRouter.call('requestAdditionalCharge', {
+      'bookingId': bookingId,
+      'workerId': workerId,
+      'amount': amount,
+      if (reason != null) 'reason': reason,
+    });
+  }
+
+  Future<Map<String, dynamic>> respondToAdditionalCharge({
+    required String bookingId,
+    required String customerId,
+    required bool approve,
+  }) {
+    return aiRouter.call('approveAdditionalCharge', {
+      'bookingId': bookingId,
+      'customerId': customerId,
+      'approve': approve,
+    });
+  }
+
   /// §9.8: W2/W3/W4 — suggested quote/tools/materials/offer message for a new job, or (mode
   /// "summary") a post-job work summary from job notes + materials (W6). Falls back to a
   /// deterministic mid-band quote / canned summary if the LLM tier is unavailable (see

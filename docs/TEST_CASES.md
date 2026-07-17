@@ -195,13 +195,32 @@ summary — not blocking, worth a prompt tweak if it shows up often.
 
 ---
 
+## 2g. Additional-charge approval + booking cancellation
+
+Verified live end-to-end via script: request → `bookings.pendingAdditionalCharge`/`-Reason`
+populate → approve → amount moves into `additionalCharges` and pending fields clear. The
+amount is stored server-side and read back at approval time rather than trusted from the
+client, so a customer can't quietly approve a different amount than what was actually
+requested (see `requestAdditionalCharge.js`/`approveAdditionalCharge.js`).
+
+| # | Test | App | Steps | Expected | Status |
+|---|---|---|---|---|---|
+| 2g.1 | Worker requests a charge | Worker | Active Job screen, while `in_progress` → "Request additional charge" → amount + reason → Request | Button replaced with "Waiting for customer to approve..." text; customer gets a notification | ✅ (scripted) / 🔲 (UI) |
+| 2g.2 | Customer sees the request live | Customer | Tracking screen, open before/during 2g.1 | An approval card appears within ~1-2s showing the amount + reason, with Approve/Decline buttons | 🔲 |
+| 2g.3 | Approve | Customer | Tap "Approve" on the card | `bookings.additionalCharges` increases by the requested amount, `pendingAdditionalCharge` clears, card disappears; worker gets a notification | ✅ (scripted) / 🔲 (UI) |
+| 2g.4 | Decline | Customer | Tap "Decline" instead | `pendingAdditionalCharge` clears without changing `additionalCharges`; worker gets a notification | 🔲 (approve path scripted; decline path not yet scripted separately, same code path) |
+| 2g.5 | Cancel before service starts | Customer/Worker | Tracking/Active Job screen, at any status before `service_started` → "Cancel booking" → confirm | Booking transitions to `cancelled`; screen closes | ✅ (scripted) / 🔲 (UI) |
+| 2g.6 | No cancel option mid-service | Customer/Worker | Check the screen once status is `service_started`/`in_progress`/`completion_requested` | "Cancel booking" button is not shown | 🔲 |
+
+---
+
 ## 4. Known gaps (not yet built — don't file these as bugs)
 
-Additional-charge approval mid-job, live map/ETA rendering, cancel/dispute flows, photo/voice
-problem intake (text-only AI intake is done — §2b), and the full SOS Control Center action set
-(Open Live Location, Call parties, Pause Booking, Block Payment, Cancel, Suspend — only
-Acknowledge/In progress/Mark safe/Close are built, §2d) — these are Phase 3+ per the plan's
-phase ordering
-(§13). Fraud reporting is now built (§2e). Cloud LLM (Groq) is now configured and confirmed
-live (§2b) — §0.6's fallback-ladder behavior still applies if Groq
+Live map/ETA rendering, dispute resolution flow (distinct from a plain cancel, which is built —
+§2g), photo/voice problem intake (text-only AI intake is done — §2b), and the full SOS Control
+Center action set (Open Live Location, Call parties, Pause Booking, Block Payment, Cancel,
+Suspend — only Acknowledge/In progress/Mark safe/Close are built, §2d) — these are Phase 3+ per
+the plan's phase ordering (§13). Additional-charge approval and booking cancellation are now
+built (§2g). Fraud reporting is now built (§2e). Cloud LLM (Groq) is now configured and
+confirmed live (§2b) — §0.6's fallback-ladder behavior still applies if Groq
 itself is ever unreachable/rate-limited, just isn't the current normal path anymore.

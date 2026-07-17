@@ -24,6 +24,8 @@ class Booking {
   final int? ratingGiven;
   final String? reviewText;
   final String? workSummary;
+  final double? pendingAdditionalCharge;
+  final String? pendingAdditionalChargeReason;
 
   const Booking({
     required this.id,
@@ -47,6 +49,8 @@ class Booking {
     this.ratingGiven,
     this.reviewText,
     this.workSummary,
+    this.pendingAdditionalCharge,
+    this.pendingAdditionalChargeReason,
   });
 
   factory Booking.fromMap(Map<String, dynamic> map) => Booking(
@@ -71,5 +75,7 @@ class Booking {
         ratingGiven: (map['ratingGiven'] as num?)?.toInt(),
         reviewText: map['reviewText'] as String?,
         workSummary: map['workSummary'] as String?,
+        pendingAdditionalCharge: (map['pendingAdditionalCharge'] as num?)?.toDouble(),
+        pendingAdditionalChargeReason: map['pendingAdditionalChargeReason'] as String?,
       );
 }

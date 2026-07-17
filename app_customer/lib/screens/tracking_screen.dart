@@ -91,6 +91,57 @@ class _TrackingScreenState extends State<TrackingScreen> {
     }
   }
 
+  /// Plan §14.2 demo script: "worker requests Rs. 500 material -> customer approves".
+  Future<void> _respondToCharge(bool approve) async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await AppServices.bookings.respondToAdditionalCharge(
+        bookingId: widget.bookingId,
+        customerId: widget.profile.id,
+        approve: approve,
+      );
+    } catch (e) {
+      setState(() => _error = 'Could not respond: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _cancelBooking() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel this booking?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('No')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Yes, cancel')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await AppServices.bookings.transition(
+        bookingId: widget.bookingId,
+        nextStatus: BookingStatus.cancelled,
+        changedByRole: 'customer',
+        changedById: widget.profile.id,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } catch (e) {
+      setState(() => _error = 'Could not cancel: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   void dispose() {
     _subscription?.close();
@@ -165,6 +216,47 @@ class _TrackingScreenState extends State<TrackingScreen> {
                     ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator())
                     : const Text('Confirm & pay (COD)'),
               ),
+            if ((booking.pendingAdditionalCharge ?? 0) > 0) ...[
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Worker requests Rs. ${booking.pendingAdditionalCharge!.toStringAsFixed(0)} for materials',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      if ((booking.pendingAdditionalChargeReason ?? '').isNotEmpty)
+                        Text(booking.pendingAdditionalChargeReason!),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          FilledButton(
+                            onPressed: _busy ? null : () => _respondToCharge(true),
+                            child: const Text('Approve'),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton(
+                            onPressed: _busy ? null : () => _respondToCharge(false),
+                            child: const Text('Decline'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            if (![BookingStatus.serviceStarted, BookingStatus.inProgress, BookingStatus.completionRequested]
+                .contains(booking.status)) ...[
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: _busy ? null : _cancelBooking,
+                child: const Text('Cancel booking'),
+              ),
+            ],
           ],
         ),
       ),

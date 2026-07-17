@@ -142,6 +142,92 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
     }
   }
 
+  /// Plan §14.2 demo script: worker requests extra payment for unplanned materials mid-job.
+  Future<void> _requestAdditionalCharge() async {
+    final amountController = TextEditingController();
+    final reasonController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Request additional charge'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: amountController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Amount (Rs.)'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(labelText: 'Reason (e.g. extra pipe fitting)'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Request')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final amount = double.tryParse(amountController.text.trim());
+    if (amount == null || amount <= 0) {
+      setState(() => _error = 'Enter a valid amount');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await AppServices.bookings.requestAdditionalCharge(
+        bookingId: widget.bookingId,
+        workerId: widget.profile.id,
+        amount: amount,
+        reason: reasonController.text.trim(),
+      );
+    } catch (e) {
+      setState(() => _error = 'Could not request additional charge: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _cancelBooking() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel this job?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('No')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Yes, cancel')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await AppServices.bookings.transition(
+        bookingId: widget.bookingId,
+        nextStatus: BookingStatus.cancelled,
+        changedByRole: 'worker',
+        changedById: widget.profile.id,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } catch (e) {
+      setState(() => _error = 'Could not cancel: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _submitOtp() async {
     setState(() {
       _busy = true;
@@ -265,6 +351,28 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
               )
             else
               const Text('Waiting for the customer to confirm & pay.'),
+            if (booking.status == BookingStatus.inProgress) ...[
+              const SizedBox(height: 16),
+              if ((booking.pendingAdditionalCharge ?? 0) > 0)
+                Text(
+                  'Waiting for customer to approve Rs. ${booking.pendingAdditionalCharge!.toStringAsFixed(0)} '
+                  '(${booking.pendingAdditionalChargeReason ?? ''})',
+                  style: const TextStyle(fontStyle: FontStyle.italic),
+                )
+              else
+                OutlinedButton(
+                  onPressed: _busy ? null : _requestAdditionalCharge,
+                  child: const Text('Request additional charge'),
+                ),
+            ],
+            if (![BookingStatus.serviceStarted, BookingStatus.inProgress, BookingStatus.completionRequested]
+                .contains(booking.status)) ...[
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: _busy ? null : _cancelBooking,
+                child: const Text('Cancel booking'),
+              ),
+            ],
           ],
         ),
       ),

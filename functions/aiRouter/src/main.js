@@ -17,6 +17,8 @@ const handlers = {
   submitRating: require('./handlers/submitRating'),
   updateSosStatus: require('./handlers/updateSosStatus'),
   updateFraudDecision: require('./handlers/updateFraudDecision'),
+  requestAdditionalCharge: require('./handlers/requestAdditionalCharge'),
+  approveAdditionalCharge: require('./handlers/approveAdditionalCharge'),
 };
 
 module.exports = async (ctx) => {
