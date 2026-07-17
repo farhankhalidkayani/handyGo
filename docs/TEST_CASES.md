@@ -352,6 +352,39 @@ zeroes it; a worker attempting to withdraw a different worker's wallet is reject
 | 2p.8 | Admin live operations map | Admin | Map tab | Markers for every non-terminal booking (colored by status) and every open SOS alert (red) | 🔲 |
 | 2p.9 | Admin finance audit | Admin | Finance tab | Total revenue/commission/paid-to-workers stat cards + a list of individual transactions | 🔲 |
 | 2p.10 | Admin AI Insights | Admin | Insights tab | Flagged chat messages and workers with `performanceScore < 60` shown as cards; empty states are friendly, not blank | 🔲 |
+| 2p.11 | Booking detail + audit history | Admin | Bookings tab → tap any booking | Dialog with problem/address/quote/work summary and a chronological status-history timeline | 🔲 |
+| 2p.12 | Service timer | Worker | Active Job screen, once status reaches `in_progress` | A live `HH:MM:SS` counter appears, computed from the `booking_status_history` entry's timestamp — correct even if the screen is closed and reopened mid-job | 🔲 |
+
+---
+
+## 2q. Permission audit fixes: admin Team, transactions scoping
+
+Two real issues found while auditing permissions (not introduced this session, but not
+caught until now either — both verified live before and after):
+
+1. `analytics_daily`/`ai_logs` were declared `read("team:admin")` from the start, but no
+   Appwrite Team named "admin" ever existed — confirmed a real admin session got "not
+   authorized" reading `analytics_daily` before the fix. Created the team, added the
+   existing admin account (`functions/setup_admin_team.js`, safe to re-run), and wired
+   `seed/seed.js` so future/re-seeded admin accounts join it automatically.
+2. `transactions` granted blanket `read("users")` — any logged-in user, not just those
+   involved, could read every transaction. Changed to `read("team:admin")` at the collection
+   level plus document-level read grants to the specific customer/worker at creation time
+   (`transitionBooking.js`).
+
+| # | Test | App | Steps | Expected | Status |
+|---|---|---|---|---|---|
+| 2q.1 | Admin can read analytics_daily | Admin | Analytics tab, logged in as the seeded admin account | Loads normally (previously failed with "not authorized" for a real session) | ✅ (scripted, real session) |
+| 2q.2 | Involved customer can read their own transaction | — | Customer session reads a transactions doc where they're the customerId | Succeeds | ✅ (scripted, real session) |
+| 2q.3 | Involved worker can read their own transaction | — | Worker session reads a transactions doc where they're the workerId | Succeeds | ✅ (scripted, real session) |
+| 2q.4 | Admin can still read any transaction | Admin | Admin session reads any transactions doc | Succeeds (via team membership, not blanket collection access) | ✅ (scripted, real session) |
+| 2q.5 | An unrelated user cannot read someone else's transaction | — | A 4th, uninvolved user's session tries to read the same doc | Denied ("could not be found" — Appwrite's standard response for a permission-denied read) | ✅ (scripted, real session) |
+| 2q.6 | Re-seeding keeps admin team membership correct | — | Run `node seed/seed.js` again | The admin account is (re-)added to the "admin" team without erroring on a second run | 🔲 |
+
+**`bookings` deliberately stays `read("users")`** — the open-job marketplace model requires
+any online worker to browse any unassigned booking to decide whether to bid on it, which is
+a legitimate design need, not an oversight. Narrowing this would require per-role Appwrite
+Teams (worker/customer) wired into every signup flow, a larger change than this pass's scope.
 
 ---
 
@@ -365,15 +398,9 @@ geographic clustering of demand vs. online worker coverage. `recommendWorkers`'s
 C5 mode (ranking nearby workers for a customer, distinct from the now-built C6 offer
 comparison — §2j) is implemented server-side but not yet called from any UI, since the
 current matching model is worker-initiated offers rather than customer-browsed rankings.
-A live "service timer" during `in_progress` and an in-app "ask a question before offering"
-path are not built (chat is scoped to bookings that already have a worker assigned). Cloud
-LLM (Groq) is configured and confirmed live (§2b) — §0.6's fallback-ladder behavior still
-applies if Groq itself is ever unreachable/rate-limited, just isn't the current normal path
-anymore.
-
-**Known security note (pre-existing, not introduced this session):** `bookings` and
-`transactions` grant collection-level `read("users")`, meaning any authenticated user (not
-just the involved customer/worker/admin) can query all documents in these collections —
-document-level permissions were never set at creation time to narrow this. Not a blocker for
-demo/FYP testing, but should be tightened (e.g. `_ownerPermissions`-style scoping, same
-pattern already used on `customer_profiles`/`worker_profiles`) before any real deployment.
+An in-app "ask a question before offering" path was deliberately not built: multiple workers
+messaging the same open booking would land in one unattributed, jumbled chat thread (the
+`messages` schema/UI has no per-candidate-worker channel concept), and shipping that
+half-working seemed worse than leaving the gap. Cloud LLM (Groq) is configured and confirmed
+live (§2b) — §0.6's fallback-ladder behavior still applies if Groq itself is ever
+unreachable/rate-limited, just isn't the current normal path anymore.
