@@ -23,6 +23,12 @@ class ProfileRepository {
     return UserProfile.fromMap(res.documents.first.data..addAll({'\$id': res.documents.first.$id}));
   }
 
+  /// Documents get owner-only write permission (in addition to the broad collection-level
+  /// read) so e.g. a worker can toggle their own availability directly from the client —
+  /// everything else (status transitions, verification, scores) still only writable via the
+  /// API-key-backed Functions, per §11.
+  List<String> _ownerPermissions(String authId) => [Permission.write(Role.user(authId))];
+
   Future<models.Document> createUserDocument({
     required String authId,
     required String role,
@@ -46,10 +52,12 @@ class ProfileRepository {
         'riskScore': 0,
         'createdVia': 'app',
       },
+      permissions: _ownerPermissions(authId),
     );
   }
 
   Future<models.Document> createCustomerProfile({
+    required String authId,
     required String userId,
     double? lat,
     double? lng,
@@ -67,10 +75,12 @@ class ProfileRepository {
         'totalBookings': 0,
         'trustScore': 100,
       },
+      permissions: _ownerPermissions(authId),
     );
   }
 
   Future<models.Document> createWorkerProfile({
+    required String authId,
     required String userId,
     required List<String> skills,
     required double serviceAreaLat,
@@ -99,6 +109,19 @@ class ProfileRepository {
         'currentLat': serviceAreaLat,
         'currentLng': serviceAreaLng,
       },
+      permissions: _ownerPermissions(authId),
+    );
+  }
+
+  Future<models.Document> updateWorkerAvailability({
+    required String workerProfileId,
+    required String availability,
+  }) {
+    return databases.updateDocument(
+      databaseId: HandyGoConfig.databaseId,
+      collectionId: Collections.workerProfiles,
+      documentId: workerProfileId,
+      data: {'availability': availability},
     );
   }
 

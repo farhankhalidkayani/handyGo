@@ -73,6 +73,7 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
         language: widget.language,
       );
       await AppServices.profiles.createWorkerProfile(
+        authId: widget.authId,
         userId: userDoc.$id,
         skills: _selectedSkills.toList(),
         serviceAreaLat: lat,

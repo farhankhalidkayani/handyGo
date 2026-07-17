@@ -8,4 +8,7 @@ class AppServices {
   static final Client client = HandyGoConfig.buildClient();
   static final AuthService auth = AuthService(client);
   static final ProfileRepository profiles = ProfileRepository(client);
+  static final CategoryRepository categories = CategoryRepository(client);
+  static final BookingRepository bookings = BookingRepository(client);
+  static final OfferRepository offers = OfferRepository(client);
 }

@@ -54,6 +54,11 @@ async function createDemoUser({ name, email, phone, role, language }) {
   // userDoc.$id (NOT authUser.$id) is what customer_profiles/worker_profiles.userId must
   // reference — see plan §5.2/§5.3 "userId -> users.$id" and shared/ProfileRepository, which
   // both link via the `users` collection document id, not the Appwrite Auth user id.
+  // Owner write permission — mirrors shared/ProfileRepository so seeded demo accounts can
+  // toggle their own fields (e.g. worker availability) from the real apps, same as a real
+  // signup would get.
+  const ownerPermissions = [sdk.Permission.write(sdk.Role.user(authUser.$id))];
+
   let userDoc = await databases.createDocument(DB_ID, 'users', sdk.ID.unique(), {
     authId: authUser.$id,
     role,
@@ -64,7 +69,7 @@ async function createDemoUser({ name, email, phone, role, language }) {
     status: 'active',
     riskScore: 0,
     createdVia: 'seed',
-  }).catch(async (e) => {
+  }, ownerPermissions).catch(async (e) => {
     if (e.code === 409) {
       const list = await databases.listDocuments(DB_ID, 'users', [sdk.Query.equal('authId', authUser.$id), sdk.Query.limit(1)]);
       return list.documents[0];
@@ -78,14 +83,14 @@ async function createDemoUser({ name, email, phone, role, language }) {
 async function seedCustomers() {
   console.log(`Seeding ${demo.customers.length} customer(s)...`);
   for (const c of demo.customers) {
-    const { userDoc } = await createDemoUser({ ...c, role: 'customer' });
+    const { authUser, userDoc } = await createDemoUser({ ...c, role: 'customer' });
     await databases.createDocument(DB_ID, 'customer_profiles', sdk.ID.unique(), {
       userId: userDoc.$id,
       currentLat: c.lat,
       currentLng: c.lng,
       totalBookings: 0,
       trustScore: 100,
-    }).catch((e) => {
+    }, [sdk.Permission.write(sdk.Role.user(authUser.$id))]).catch((e) => {
       if (e.code !== 409) console.error(`  customer_profiles for ${c.email}: ${e.message}`);
     });
     console.log(`  + ${c.name} (${c.email})`);
@@ -95,7 +100,7 @@ async function seedCustomers() {
 async function seedWorkers() {
   console.log(`Seeding ${demo.workers.length} worker(s)...`);
   for (const w of demo.workers) {
-    const { userDoc } = await createDemoUser({ ...w, role: 'worker' });
+    const { authUser, userDoc } = await createDemoUser({ ...w, role: 'worker' });
     await databases.createDocument(DB_ID, 'worker_profiles', sdk.ID.unique(), {
       userId: userDoc.$id,
       skills: w.skills,
@@ -112,7 +117,7 @@ async function seedWorkers() {
       performanceScore: 80,
       currentLat: w.lat,
       currentLng: w.lng,
-    }).catch((e) => {
+    }, [sdk.Permission.write(sdk.Role.user(authUser.$id))]).catch((e) => {
       if (e.code !== 409) console.error(`  worker_profiles for ${w.email}: ${e.message}`);
     });
     console.log(`  + ${w.name} (${w.email})`);

@@ -9,6 +9,7 @@ class Booking {
   final String categoryId;
   final bool detectedByAi;
   final String problemText;
+  final String addressText;
   final double lat;
   final double lng;
   final double? aiEstimateMin;
@@ -17,6 +18,8 @@ class Booking {
   final double? finalQuote;
   final BookingStatus status;
   final String? otp;
+  final int? ratingGiven;
+  final String? reviewText;
 
   const Booking({
     required this.id,
@@ -25,6 +28,7 @@ class Booking {
     required this.categoryId,
     this.detectedByAi = false,
     required this.problemText,
+    this.addressText = '',
     required this.lat,
     required this.lng,
     this.aiEstimateMin,
@@ -33,6 +37,8 @@ class Booking {
     this.finalQuote,
     required this.status,
     this.otp,
+    this.ratingGiven,
+    this.reviewText,
   });
 
   factory Booking.fromMap(Map<String, dynamic> map) => Booking(
@@ -42,6 +48,7 @@ class Booking {
         categoryId: map['categoryId'] as String,
         detectedByAi: map['detectedByAI'] as bool? ?? false,
         problemText: map['problemText'] as String? ?? '',
+        addressText: map['addressText'] as String? ?? '',
         lat: (map['lat'] as num).toDouble(),
         lng: (map['lng'] as num).toDouble(),
         aiEstimateMin: (map['aiEstimateMin'] as num?)?.toDouble(),
@@ -50,5 +57,7 @@ class Booking {
         finalQuote: (map['finalQuote'] as num?)?.toDouble(),
         status: BookingStatusWire.fromWire(map['status'] as String),
         otp: map['otp'] as String?,
+        ratingGiven: (map['ratingGiven'] as num?)?.toInt(),
+        reviewText: map['reviewText'] as String?,
       );
 }

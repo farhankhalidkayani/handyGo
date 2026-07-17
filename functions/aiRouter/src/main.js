@@ -13,6 +13,8 @@ const handlers = {
   routePlanner: require('./handlers/routePlanner'),
   transitionBooking: require('./handlers/transitionBooking'),
   updateWorkerVerification: require('./handlers/updateWorkerVerification'),
+  selectOffer: require('./handlers/selectOffer'),
+  submitRating: require('./handlers/submitRating'),
 };
 
 module.exports = async (ctx) => {

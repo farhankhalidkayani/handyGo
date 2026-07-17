@@ -58,6 +58,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         language: widget.language,
       );
       await AppServices.profiles.createCustomerProfile(
+        authId: widget.authId,
         userId: userDoc.$id,
         lat: lat,
         lng: lng,

@@ -54,5 +54,29 @@ module.exports = async function transitionBooking(body) {
     timestamp: new Date().toISOString(),
   }).catch(() => {});
 
+  // Real online-payment settlement is out of scope for the FYP (plan §1) — completion is
+  // treated as an instant COD settlement, recorded here since transactions.commission/
+  // netToWorker are server-only fields (§11).
+  if (nextStatus === 'completed') {
+    const serviceCharges = booking.finalQuote || 0;
+    const materialCharges = booking.additionalCharges || 0;
+    const total = serviceCharges + materialCharges;
+    const commission = Math.round(total * 0.15 * 100) / 100;
+    await databases.createDocument(DB_ID, 'transactions', 'unique()', {
+      bookingId,
+      customerId: booking.customerId,
+      workerId: booking.workerId || '',
+      serviceCharges,
+      materialCharges,
+      platformFee: commission,
+      discount: 0,
+      total,
+      method: 'cod',
+      status: 'paid',
+      commission,
+      netToWorker: Math.round((total - commission) * 100) / 100,
+    }).catch(() => {});
+  }
+
   return { status: 200, body: { ok: true, status: nextStatus } };
 };

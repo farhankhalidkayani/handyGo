@@ -430,6 +430,7 @@
         {
             "$id": "bookings",
             "$permissions": [
+                "create(\"users\")",
                 "read(\"users\")"
             ],
             "databaseId": "handygo",
@@ -605,6 +606,7 @@
         {
             "$id": "worker_offers",
             "$permissions": [
+                "create(\"users\")",
                 "read(\"users\")"
             ],
             "databaseId": "handygo",

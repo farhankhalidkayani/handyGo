@@ -1,0 +1,187 @@
+import 'dart:math';
+
+import 'package:appwrite/appwrite.dart';
+
+import 'ai_router_client.dart';
+import 'appwrite_config.dart';
+import 'booking_status.dart';
+import 'models/booking.dart';
+
+/// Booking creation is a direct client write (bookings grants create("users")); every status
+/// transition after that goes through the `transitionBooking` aiRouter feature, never a direct
+/// client update — see plan §7.1/§11 and functions/aiRouter/src/handlers/transitionBooking.js.
+class BookingRepository {
+  final Databases databases;
+  final AiRouterClient aiRouter;
+  final Realtime realtime;
+
+  BookingRepository(Client client)
+      : databases = Databases(client),
+        aiRouter = AiRouterClient(client),
+        realtime = Realtime(client);
+
+  String _generateOtp() => (1000 + Random().nextInt(9000)).toString();
+
+  Future<Booking> createBooking({
+    required String customerId,
+    required String categoryId,
+    required String problemText,
+    required String addressText,
+    required double lat,
+    required double lng,
+  }) async {
+    final doc = await databases.createDocument(
+      databaseId: HandyGoConfig.databaseId,
+      collectionId: Collections.bookings,
+      documentId: ID.unique(),
+      data: {
+        'customerId': customerId,
+        'categoryId': categoryId,
+        'problemText': problemText,
+        'addressText': addressText,
+        'lat': lat,
+        'lng': lng,
+        'status': BookingStatus.draft.wire,
+        'otp': _generateOtp(),
+      },
+      // Explicit empty permissions — Appwrite otherwise grants the creating session
+      // implicit owner write access, which would let a customer bypass the state machine
+      // and write bookings.status directly (verified against the live project during
+      // testing). Read still works for everyone via the collection-level read("users").
+      permissions: [],
+    );
+
+    await aiRouter.call('transitionBooking', {
+      'bookingId': doc.$id,
+      'nextStatus': BookingStatus.searchingWorkers.wire,
+      'changedByRole': 'customer',
+      'changedById': customerId,
+    });
+
+    final updated = await databases.getDocument(
+      databaseId: HandyGoConfig.databaseId,
+      collectionId: Collections.bookings,
+      documentId: doc.$id,
+    );
+    return Booking.fromMap({...updated.data, '\$id': updated.$id});
+  }
+
+  Future<Booking> getBooking(String bookingId) async {
+    final doc = await databases.getDocument(
+      databaseId: HandyGoConfig.databaseId,
+      collectionId: Collections.bookings,
+      documentId: bookingId,
+    );
+    return Booking.fromMap({...doc.data, '\$id': doc.$id});
+  }
+
+  /// The customer's single active booking, if any (any status that isn't terminal).
+  Future<Booking?> findActiveForCustomer(String customerId) async {
+    final res = await databases.listDocuments(
+      databaseId: HandyGoConfig.databaseId,
+      collectionId: Collections.bookings,
+      queries: [
+        Query.equal('customerId', customerId),
+        Query.notEqual('status', BookingStatus.completed.wire),
+        Query.notEqual('status', BookingStatus.cancelled.wire),
+        Query.orderDesc('\$createdAt'),
+        Query.limit(1),
+      ],
+    );
+    if (res.documents.isEmpty) return null;
+    return Booking.fromMap({...res.documents.first.data, '\$id': res.documents.first.$id});
+  }
+
+  /// The worker's single active (accepted) job, if any.
+  Future<Booking?> findActiveForWorker(String workerUserId) async {
+    final res = await databases.listDocuments(
+      databaseId: HandyGoConfig.databaseId,
+      collectionId: Collections.bookings,
+      queries: [
+        Query.equal('workerId', workerUserId),
+        Query.notEqual('status', BookingStatus.completed.wire),
+        Query.notEqual('status', BookingStatus.cancelled.wire),
+        Query.orderDesc('\$createdAt'),
+        Query.limit(1),
+      ],
+    );
+    if (res.documents.isEmpty) return null;
+    return Booking.fromMap({...res.documents.first.data, '\$id': res.documents.first.$id});
+  }
+
+  Future<List<Booking>> listOpenBookings(List<String> categoryIds, {int limit = 50}) async {
+    if (categoryIds.isEmpty) return [];
+    final res = await databases.listDocuments(
+      databaseId: HandyGoConfig.databaseId,
+      collectionId: Collections.bookings,
+      queries: [
+        Query.equal('status', BookingStatus.searchingWorkers.wire),
+        Query.equal('categoryId', categoryIds),
+        Query.orderDesc('\$createdAt'),
+        Query.limit(limit),
+      ],
+    );
+    return res.documents.map((d) => Booking.fromMap({...d.data, '\$id': d.$id})).toList();
+  }
+
+  Future<List<Booking>> listAllBookings({int limit = 100}) async {
+    final res = await databases.listDocuments(
+      databaseId: HandyGoConfig.databaseId,
+      collectionId: Collections.bookings,
+      queries: [Query.orderDesc('\$createdAt'), Query.limit(limit)],
+    );
+    return res.documents.map((d) => Booking.fromMap({...d.data, '\$id': d.$id})).toList();
+  }
+
+  Future<Map<String, dynamic>> transition({
+    required String bookingId,
+    required BookingStatus nextStatus,
+    required String changedByRole,
+    required String changedById,
+    String? note,
+    String? otp,
+  }) {
+    return aiRouter.call('transitionBooking', {
+      'bookingId': bookingId,
+      'nextStatus': nextStatus.wire,
+      'changedByRole': changedByRole,
+      'changedById': changedById,
+      if (note != null) 'note': note,
+      if (otp != null) 'otp': otp,
+    });
+  }
+
+  Future<Map<String, dynamic>> selectOffer({
+    required String bookingId,
+    required String offerId,
+    required String customerId,
+  }) {
+    return aiRouter.call('selectOffer', {
+      'bookingId': bookingId,
+      'offerId': offerId,
+      'customerId': customerId,
+    });
+  }
+
+  Future<Map<String, dynamic>> submitRating({
+    required String bookingId,
+    required String customerId,
+    required int rating,
+    String? reviewText,
+  }) {
+    return aiRouter.call('submitRating', {
+      'bookingId': bookingId,
+      'customerId': customerId,
+      'rating': rating,
+      if (reviewText != null) 'reviewText': reviewText,
+    });
+  }
+
+  /// Raw realtime channel for the bookings collection — callers filter by bookingId/
+  /// customerId/workerId themselves, per the plan's own subscription pattern (§6.2).
+  RealtimeSubscription subscribeToBookings() {
+    return realtime.subscribe([
+      'databases.${HandyGoConfig.databaseId}.collections.${Collections.bookings}.documents',
+    ]);
+  }
+}

@@ -99,14 +99,9 @@ workers around one area, admin) — password `Handygo@123`.
 
 ## 6. Flutter apps
 
-Flutter 3.44.6 and Android Studio are both installed; all three apps are scaffolded and analyze
-clean. Android Studio still needs its first-launch SDK component setup before builds work —
-open it once, let it install the SDK, then:
-
-```bash
-flutter doctor --android-licenses
-flutter doctor   # confirm the Android toolchain check passes
-```
+Flutter 3.44.6 and the Android SDK (headless via `sdkmanager`, no Android Studio GUI needed) are
+both installed and working — `flutter doctor` passes, and all three apps build (2 debug APKs, 1
+web build).
 
 Run any app with the endpoint/project as `--dart-define`s, matching `shared/lib/src/appwrite_config.dart`:
 
@@ -114,8 +109,24 @@ Run any app with the endpoint/project as `--dart-define`s, matching `shared/lib/
 flutter run --dart-define=APPWRITE_PROJECT=handygo --dart-define=APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
 ```
 
+## 7. Verifying the backend end-to-end
+
+`seed/e2e_test.js` drives the full booking lifecycle (create → offer → select → confirm →
+on-the-way → arrived → OTP → in-progress → complete → auto-transaction → rating) as **real
+user sessions** (via `users.createSession`, a server-side impersonation endpoint used only for
+this test), not the API key — the API key bypasses every permission check, so it's the only way
+to actually verify client-side writes/permissions work, not just that the server-side logic is
+correct. It also checks the negative cases (customer can't write `bookings.status` directly,
+wrong OTP is rejected). Cleans up all its own test data and sessions on exit.
+
+```bash
+cd seed && node e2e_test.js
+```
+
 ## Where to go next
 
-Follow the plan's own phase ordering (§13): build the real-time booking skeleton across the
-three apps first (Phases 1–3) before wiring the AI layers on top (Phases 4–8) — the backend here
-already supports both.
+Phases 1 (auth/profiles) and 2 (core booking: create → offers → select → tracking → OTP →
+completion → payment → rating, real-time across all 3 apps) are done. Follow the plan's own
+phase ordering (§13) for what's next — AI layers (Phases 4–8) on top of this real-time skeleton.
+Known follow-ups not yet built: additional-charge approval mid-job, chat, live map/ETA
+rendering, cancel/dispute flows, SOS, and photo/voice problem intake.
