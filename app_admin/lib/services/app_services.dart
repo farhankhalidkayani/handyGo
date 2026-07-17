@@ -17,19 +17,22 @@ class AppServices {
   static final CategoryRepository categories = CategoryRepository(client);
   static final TransactionRepository transactions = TransactionRepository(client);
   static final MessageRepository messages = MessageRepository(client);
+  static final MediaRepository media = MediaRepository(client);
 
   /// Calls the `aiRouter` Function's `updateWorkerVerification` feature (admin-gated
   /// server-side via the caller's real Appwrite user id — see
   /// functions/aiRouter/src/handlers/updateWorkerVerification.js).
   static Future<Map<String, dynamic>> updateWorkerVerification({
     required String workerProfileId,
-    required String status,
+    String? status,
     String? reason,
+    bool requestMoreInfo = false,
   }) {
     return aiRouter.call('updateWorkerVerification', {
       'workerProfileId': workerProfileId,
-      'status': status,
+      if (status != null) 'status': status,
       if (reason != null) 'reason': reason,
+      if (requestMoreInfo) 'requestMoreInfo': true,
     });
   }
 }

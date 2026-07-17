@@ -23,9 +23,32 @@ module.exports = async function updateWorkerVerification(body, { req }) {
     return { status: 403, body: { error: 'admin role required' } };
   }
 
-  const { workerProfileId, status, reason } = body;
-  if (!workerProfileId || !ALLOWED.includes(status)) {
+  const { workerProfileId, status, reason, requestMoreInfo } = body;
+  if (!workerProfileId) return { status: 400, body: { error: 'workerProfileId is required' } };
+
+  // "Request more info" (plan §12 verification-queue checklist) deliberately doesn't change
+  // verificationStatus — the worker stays in the under_review queue, this just asks a
+  // question and waits, rather than forcing a premature approve/reject decision.
+  if (requestMoreInfo) {
+    if (!reason) return { status: 400, body: { error: 'reason is required when requesting more info' } };
+    const worker = await databases.getDocument(DB_ID, 'worker_profiles', workerProfileId).catch(() => null);
+    if (!worker) return { status: 404, body: { error: 'worker profile not found' } };
+    await databases.createDocument(DB_ID, 'notifications', 'unique()', {
+      userId: worker.userId,
+      role: 'worker',
+      type: 'verification_update',
+      title: 'More information needed',
+      body: reason,
+      read: false,
+    }).catch(() => {});
+    return { status: 200, body: { ok: true, workerProfileId, requestMoreInfo: true } };
+  }
+
+  if (!ALLOWED.includes(status)) {
     return { status: 400, body: { error: `workerProfileId and status (one of ${ALLOWED.join(', ')}) are required` } };
+  }
+  if ((status === 'rejected' || status === 'suspended') && !reason) {
+    return { status: 400, body: { error: 'reason is required when rejecting or suspending' } };
   }
 
   const worker = await databases.updateDocument(DB_ID, 'worker_profiles', workerProfileId, {

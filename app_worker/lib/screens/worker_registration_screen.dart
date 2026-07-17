@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:handygo_shared/handygo_shared.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../services/app_services.dart';
 import 'under_review_screen.dart';
 
 /// Plan §12 Worker App checklist: "Registration (CNIC, selfie, skills, area, docs) →
-/// under-review state". Document upload (CNIC/selfie) needs Storage wiring and is left as a
-/// follow-up — this covers the fields that gate matching (skills, service area) so
-/// `recommendWorkers` has real data to query against.
+/// under-review state".
 class WorkerRegistrationScreen extends StatefulWidget {
   final String authId;
   final String email;
@@ -35,10 +34,60 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
   bool _saving = false;
   String? _error;
 
+  String? _cnicFrontId;
+  String? _cnicBackId;
+  String? _selfieId;
+  bool _uploadingCnicFront = false;
+  bool _uploadingCnicBack = false;
+  bool _uploadingSelfie = false;
+
   @override
   void initState() {
     super.initState();
     _categoriesFuture = AppServices.categories.listAll();
+  }
+
+  Future<void> _captureCnicFront() async {
+    setState(() => _uploadingCnicFront = true);
+    try {
+      final id = await _pickAndUpload();
+      if (id != null) setState(() => _cnicFrontId = id);
+    } catch (e) {
+      setState(() => _error = 'Could not capture CNIC front: $e');
+    } finally {
+      if (mounted) setState(() => _uploadingCnicFront = false);
+    }
+  }
+
+  Future<void> _captureCnicBack() async {
+    setState(() => _uploadingCnicBack = true);
+    try {
+      final id = await _pickAndUpload();
+      if (id != null) setState(() => _cnicBackId = id);
+    } catch (e) {
+      setState(() => _error = 'Could not capture CNIC back: $e');
+    } finally {
+      if (mounted) setState(() => _uploadingCnicBack = false);
+    }
+  }
+
+  Future<void> _captureSelfie() async {
+    setState(() => _uploadingSelfie = true);
+    try {
+      final id = await _pickAndUpload(source: ImageSource.camera);
+      if (id != null) setState(() => _selfieId = id);
+    } catch (e) {
+      setState(() => _error = 'Could not capture selfie: $e');
+    } finally {
+      if (mounted) setState(() => _uploadingSelfie = false);
+    }
+  }
+
+  Future<String?> _pickAndUpload({ImageSource source = ImageSource.gallery}) async {
+    final picked = await ImagePicker().pickImage(source: source, imageQuality: 85);
+    if (picked == null) return null;
+    final bytes = await picked.readAsBytes();
+    return AppServices.media.uploadImage(bytes: bytes, filename: picked.name);
   }
 
   Future<void> _save() async {
@@ -79,6 +128,9 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
         serviceAreaLat: lat,
         serviceAreaLng: lng,
         experienceYears: int.tryParse(_experienceController.text.trim()) ?? 0,
+        cnicFrontUrl: _cnicFrontId,
+        cnicBackUrl: _cnicBackId,
+        selfieUrl: _selfieId,
       );
 
       if (!mounted) return;
@@ -154,10 +206,36 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
                   );
                 },
               ),
+              const SizedBox(height: 16),
+              const Text('Verification documents', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _uploadingCnicFront ? null : _captureCnicFront,
+                icon: _uploadingCnicFront
+                    ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Icon(_cnicFrontId != null ? Icons.check_circle : Icons.badge_outlined),
+                label: Text(_cnicFrontId != null ? 'CNIC front captured' : 'Capture CNIC front'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _uploadingCnicBack ? null : _captureCnicBack,
+                icon: _uploadingCnicBack
+                    ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Icon(_cnicBackId != null ? Icons.check_circle : Icons.badge_outlined),
+                label: Text(_cnicBackId != null ? 'CNIC back captured' : 'Capture CNIC back'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _uploadingSelfie ? null : _captureSelfie,
+                icon: _uploadingSelfie
+                    ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Icon(_selfieId != null ? Icons.check_circle : Icons.face_outlined),
+                label: Text(_selfieId != null ? 'Selfie captured' : 'Capture selfie'),
+              ),
               const SizedBox(height: 8),
               const Text(
-                'CNIC front/back and selfie upload will be added once Storage wiring is in '
-                'place — verification stays "under review" until an admin approves regardless.',
+                'Documents help an admin verify your identity faster, but aren\'t required to '
+                'submit — verification stays "under review" until an admin approves regardless.',
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
               const SizedBox(height: 24),

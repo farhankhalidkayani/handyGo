@@ -104,6 +104,9 @@ class ProfileRepository {
     required double serviceAreaLng,
     double serviceRadiusKm = 8,
     int experienceYears = 0,
+    String? cnicFrontUrl,
+    String? cnicBackUrl,
+    String? selfieUrl,
   }) {
     return databases.createDocument(
       databaseId: HandyGoConfig.databaseId,
@@ -116,6 +119,9 @@ class ProfileRepository {
         'serviceAreaLat': serviceAreaLat,
         'serviceAreaLng': serviceAreaLng,
         'serviceRadiusKm': serviceRadiusKm,
+        if (cnicFrontUrl != null) 'cnicFrontUrl': cnicFrontUrl,
+        if (cnicBackUrl != null) 'cnicBackUrl': cnicBackUrl,
+        if (selfieUrl != null) 'selfieUrl': selfieUrl,
         'verificationStatus': 'under_review',
         'availability': 'offline',
         'rating': 0,
