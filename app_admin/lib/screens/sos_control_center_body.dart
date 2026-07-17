@@ -1,6 +1,8 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:handygo_shared/handygo_shared.dart';
+import 'package:latlong2/latlong.dart' as latlong;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/app_services.dart';
@@ -12,9 +14,9 @@ const _riskColors = {
   'low': Colors.grey,
 };
 
-/// Plan §10.3: "Admin SOS Control Center — red banner + incident timeline + actions (...
-/// Mark Safe, Close)". Open Live Location/Pause Booking/Block Payment/Cancel are still a
-/// follow-up; this now covers acknowledge/in-progress/mark safe/close/call/suspend.
+/// Plan §10.3: "Admin SOS Control Center — red banner + incident timeline + actions (Open
+/// Live Location, Call parties, Pause Booking, Block Payment, Cancel, Suspend, Mark Safe,
+/// Close)". All actions implemented.
 class SosControlCenterBody extends StatefulWidget {
   const SosControlCenterBody({super.key});
 
@@ -117,6 +119,68 @@ class _SosControlCenterBodyState extends State<SosControlCenterBody> {
     }
   }
 
+  void _openLiveLocation(SosAlert alert) {
+    if (alert.lat == null || alert.lng == null) {
+      setState(() => _error = 'No location was captured for this alert');
+      return;
+    }
+    final pos = latlong.LatLng(alert.lat!, alert.lng!);
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: SizedBox(
+          height: 320,
+          width: 400,
+          child: FlutterMap(
+            options: MapOptions(initialCenter: pos, initialZoom: 15),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.handygo.admin',
+              ),
+              MarkerLayer(markers: [
+                Marker(point: pos, child: const Icon(Icons.location_on, color: Colors.red, size: 36)),
+              ]),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _bookingAction(SosAlert alert, String bookingAction, {String? confirmMessage}) async {
+    if (alert.bookingId == null) {
+      setState(() => _error = 'This alert has no associated booking');
+      return;
+    }
+    if (confirmMessage != null) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(confirmMessage),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('No')),
+            FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Yes')),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+    setState(() => _error = null);
+    try {
+      await AppServices.sos.updateStatus(
+        sosAlertId: alert.id,
+        adminStatus: alert.adminStatus,
+        action: bookingAction,
+        bookingAction: bookingAction,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Booking action "$bookingAction" applied.')));
+    } catch (e) {
+      setState(() => _error = 'Action failed: $e');
+    }
+  }
+
   @override
   void dispose() {
     _subscription?.close();
@@ -205,6 +269,34 @@ class _SosControlCenterBodyState extends State<SosControlCenterBody> {
                                 onPressed: () => _suspendCounterpart(a),
                                 child: const Text('Suspend counterpart'),
                               ),
+                            OutlinedButton.icon(
+                              onPressed: () => _openLiveLocation(a),
+                              icon: const Icon(Icons.location_on_outlined, size: 16),
+                              label: const Text('Open live location'),
+                            ),
+                            if (a.bookingId != null) ...[
+                              OutlinedButton(
+                                onPressed: () => _bookingAction(a, 'pause'),
+                                child: const Text('Pause booking'),
+                              ),
+                              OutlinedButton(
+                                onPressed: () => _bookingAction(a, 'unpause'),
+                                child: const Text('Resume booking'),
+                              ),
+                              OutlinedButton(
+                                onPressed: () => _bookingAction(a, 'blockPayment'),
+                                child: const Text('Block payment'),
+                              ),
+                              OutlinedButton(
+                                style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                                onPressed: () => _bookingAction(
+                                  a,
+                                  'cancel',
+                                  confirmMessage: 'Cancel this booking?',
+                                ),
+                                child: const Text('Cancel booking'),
+                              ),
+                            ],
                           ],
                         ),
                       ],

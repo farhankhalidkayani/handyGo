@@ -28,6 +28,8 @@ class Booking {
   final String? workSummary;
   final double? pendingAdditionalCharge;
   final String? pendingAdditionalChargeReason;
+  final bool paused;
+  final bool paymentBlocked;
 
   const Booking({
     required this.id,
@@ -55,6 +57,8 @@ class Booking {
     this.workSummary,
     this.pendingAdditionalCharge,
     this.pendingAdditionalChargeReason,
+    this.paused = false,
+    this.paymentBlocked = false,
   });
 
   factory Booking.fromMap(Map<String, dynamic> map) => Booking(
@@ -83,5 +87,7 @@ class Booking {
         workSummary: map['workSummary'] as String?,
         pendingAdditionalCharge: (map['pendingAdditionalCharge'] as num?)?.toDouble(),
         pendingAdditionalChargeReason: map['pendingAdditionalChargeReason'] as String?,
+        paused: map['paused'] as bool? ?? false,
+        paymentBlocked: map['paymentBlocked'] as bool? ?? false,
       );
 }

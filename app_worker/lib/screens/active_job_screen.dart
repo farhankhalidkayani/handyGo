@@ -369,6 +369,11 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
             Text(booking.problemText),
             Text(booking.addressText),
             if (booking.finalQuote != null) Text('Quote: Rs. ${booking.finalQuote!.toStringAsFixed(0)}'),
+            if (booking.paused) ...[
+              const SizedBox(height: 8),
+              const Text('This booking has been paused by an admin.',
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            ],
             if ([BookingStatus.confirmed, BookingStatus.workerOnTheWay].contains(booking.status)) ...[
               const SizedBox(height: 16),
               if (_workerPos != null)

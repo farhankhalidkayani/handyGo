@@ -237,6 +237,16 @@ class _TrackingScreenState extends State<TrackingScreen> {
               const SizedBox(height: 16),
             ],
             if (booking.finalQuote != null) Text('Quote: Rs. ${booking.finalQuote!.toStringAsFixed(0)}'),
+            if (booking.paused) ...[
+              const SizedBox(height: 8),
+              const Text('This booking has been paused by an admin. Please contact support.',
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            ],
+            if (booking.paymentBlocked) ...[
+              const SizedBox(height: 8),
+              const Text('Payment for this booking is on hold pending an admin review.',
+                  style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+            ],
             if (_trackedStatuses.contains(booking.status) && _workerPos != null) ...[
               const SizedBox(height: 16),
               SizedBox(

@@ -559,6 +559,18 @@
                     "required": false
                 },
                 {
+                    "key": "paused",
+                    "type": "boolean",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "paymentBlocked",
+                    "type": "boolean",
+                    "required": false,
+                    "default": false
+                },
+                {
                     "key": "status",
                     "type": "string",
                     "size": 24,

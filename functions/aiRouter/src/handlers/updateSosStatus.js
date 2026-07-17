@@ -21,13 +21,44 @@ module.exports = async function updateSosStatus(body, { req }) {
     return { status: 403, body: { error: 'admin role required' } };
   }
 
-  const { sosAlertId, adminStatus, action, suspendUserId } = body;
+  const { sosAlertId, adminStatus, action, suspendUserId, bookingAction } = body;
   if (!sosAlertId || !ALLOWED.includes(adminStatus)) {
     return { status: 400, body: { error: `sosAlertId and adminStatus (one of ${ALLOWED.join(', ')}) are required` } };
   }
 
   const alert = await databases.getDocument(DB_ID, 'sos_alerts', sosAlertId).catch(() => null);
   if (!alert) return { status: 404, body: { error: 'sos alert not found' } };
+
+  // SOS Control Center booking-level actions (plan §10.3: Pause Booking / Block Payment /
+  // Cancel) — scoped to the booking this alert was raised against, never an arbitrary id.
+  const BOOKING_ACTIONS = ['pause', 'unpause', 'blockPayment', 'unblockPayment', 'cancel'];
+  if (bookingAction) {
+    if (!BOOKING_ACTIONS.includes(bookingAction)) {
+      return { status: 400, body: { error: `bookingAction must be one of ${BOOKING_ACTIONS.join(', ')}` } };
+    }
+    if (!alert.bookingId) {
+      return { status: 400, body: { error: 'this alert has no associated booking' } };
+    }
+    if (bookingAction === 'cancel') {
+      const transitionBooking = require('./transitionBooking');
+      const result = await transitionBooking({
+        bookingId: alert.bookingId,
+        nextStatus: 'cancelled',
+        changedByRole: 'admin',
+        changedById: callerAuthId,
+        note: 'Cancelled from SOS Control Center',
+      });
+      if (result.status !== 200) return result;
+    } else {
+      const updates = {
+        pause: { paused: true },
+        unpause: { paused: false },
+        blockPayment: { paymentBlocked: true },
+        unblockPayment: { paymentBlocked: false },
+      };
+      await databases.updateDocument(DB_ID, 'bookings', alert.bookingId, updates[bookingAction]).catch(() => {});
+    }
+  }
 
   let timeline = [];
   try {

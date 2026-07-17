@@ -38,6 +38,16 @@ module.exports = async function transitionBooking(body) {
     return { status: 409, body: { error: `illegal transition ${from} -> ${nextStatus}` } };
   }
 
+  // SOS Control Center "Pause Booking"/"Block Payment" (plan §10.3) — an admin-paused booking
+  // can still be cancelled (so the customer/worker isn't stuck), but can't otherwise progress;
+  // a payment-blocked booking can't reach `completed` (settlement) until the block is lifted.
+  if (booking.paused && nextStatus !== 'cancelled') {
+    return { status: 409, body: { error: 'booking is paused by an admin — cancel or wait for it to be resumed' } };
+  }
+  if (booking.paymentBlocked && nextStatus === 'completed') {
+    return { status: 409, body: { error: 'payment is blocked by an admin for this booking' } };
+  }
+
   if (nextStatus === 'service_started') {
     if (!otp || otp !== booking.otp) {
       return { status: 403, body: { error: 'invalid or missing OTP' } };
