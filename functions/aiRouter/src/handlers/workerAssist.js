@@ -6,12 +6,9 @@ const { askLLM, safeJsonParse } = require('../lib/llm');
 
 module.exports = async function workerAssist(body) {
   const { mode = 'quote', booking, jobNotes, materials, language = 'en' } = body;
-  if (!booking) return { status: 400, body: { error: 'booking is required' } };
 
-  const databases = getDatabases();
-  const category = await databases.getDocument(DB_ID, 'service_categories', booking.categoryId).catch(() => null);
-  const band = category ? { min: category.basePriceMin, max: category.basePriceMax } : { min: 500, max: 2000 };
-
+  // Summary mode only needs jobNotes/materials, never a booking object — bug found live: this
+  // check used to run unconditionally and rejected every summary-mode call with no booking.
   if (mode === 'summary') {
     const sys = `You are HandyGo's worker copilot. Write a short, professional post-job work
 summary in language "${language}" from the job notes and materials used. 2-4 sentences.`;
@@ -21,6 +18,12 @@ summary in language "${language}" from the job notes and materials used. 2-4 sen
       : `Job completed. Materials used: ${(materials || []).join(', ') || 'none'}.`;
     return { status: 200, body: { summary, tierUsed: out.tier === 'llm' ? 'llm' : 'fallback' } };
   }
+
+  if (!booking) return { status: 400, body: { error: 'booking is required' } };
+
+  const databases = getDatabases();
+  const category = await databases.getDocument(DB_ID, 'service_categories', booking.categoryId).catch(() => null);
+  const band = category ? { min: category.basePriceMin, max: category.basePriceMax } : { min: 500, max: 2000 };
 
   const sys = `You are HandyGo's worker copilot. Given a job, return JSON only:
 {"suggestedQuote":number,"tools":[...],"materials":[...],

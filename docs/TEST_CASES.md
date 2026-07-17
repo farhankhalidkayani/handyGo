@@ -176,13 +176,32 @@ automatically → `aiSummary`/`aiRecommendation` populate within ~10s → admin 
 
 ---
 
+## 2f. workerAssist (quote suggestion + work summary)
+
+**Found and fixed a real bug live:** `workerAssist`'s `mode: "summary"` call unconditionally
+required a `booking` object even though summary mode only uses `jobNotes`/`materials` — every
+summary-mode call was rejected with 400 until fixed. Verified both modes work after the fix.
+
+**Quality note:** the work summary sometimes includes a meta preamble ("Here's a short,
+professional post-job work summary:") before the actual summary text instead of just the
+summary — not blocking, worth a prompt tweak if it shows up often.
+
+| # | Test | App | Steps | Expected | Status |
+|---|---|---|---|---|---|
+| 2f.1 | Quote suggestion pre-fills | Worker | From the open-jobs list, tap "Offer" on a job | Quote/message fields pre-fill with an AI suggestion within a couple seconds; suggested tools/materials shown above the form | ✅ (scripted) / 🔲 (UI) |
+| 2f.2 | Quote suggestion is editable, not required | Worker | Edit the pre-filled quote before sending, or send if the AI call is slow/fails | Offer sends with whatever is actually in the fields — AI suggestion never blocks sending | 🔲 |
+| 2f.3 | Work summary generated on completion | Worker | On "Mark job as done", fill in job notes + materials (comma-separated) → Done | `bookings.workSummary` populates with an AI-written summary; booking still transitions to `completion_requested` even if the AI call fails | ✅ (scripted, feature-level) / 🔲 (UI) |
+| 2f.4 | workSummary is server-only | — | Inspect `transitionBooking.js` | `workSummary` is only ever set when transitioning to `completion_requested` through this function — no direct client update path exists on `bookings` | ✅ (code review) |
+
+---
+
 ## 4. Known gaps (not yet built — don't file these as bugs)
 
 Additional-charge approval mid-job, live map/ETA rendering, cancel/dispute flows, photo/voice
-problem intake (text-only AI intake is done — §2b), workerAssist quote suggestions (backend
-feature exists, not wired into any screen yet), and the full SOS Control Center action set (Open
-Live Location, Call parties, Pause Booking, Block Payment, Cancel, Suspend — only Acknowledge/
-In progress/Mark safe/Close are built, §2d) — these are Phase 3+ per the plan's phase ordering
+problem intake (text-only AI intake is done — §2b), and the full SOS Control Center action set
+(Open Live Location, Call parties, Pause Booking, Block Payment, Cancel, Suspend — only
+Acknowledge/In progress/Mark safe/Close are built, §2d) — these are Phase 3+ per the plan's
+phase ordering
 (§13). Fraud reporting is now built (§2e). Cloud LLM (Groq) is now configured and confirmed
 live (§2b) — §0.6's fallback-ladder behavior still applies if Groq
 itself is ever unreachable/rate-limited, just isn't the current normal path anymore.

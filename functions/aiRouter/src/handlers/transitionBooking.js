@@ -21,7 +21,7 @@ const TRANSITIONS = {
 const TERMINAL = ['completed', 'cancelled', 'refunded'];
 
 module.exports = async function transitionBooking(body) {
-  const { bookingId, nextStatus, changedByRole, changedById, note, otp } = body;
+  const { bookingId, nextStatus, changedByRole, changedById, note, otp, workSummary } = body;
   if (!bookingId || !nextStatus || !changedByRole) {
     return { status: 400, body: { error: 'bookingId, nextStatus, changedByRole are required' } };
   }
@@ -44,7 +44,11 @@ module.exports = async function transitionBooking(body) {
     }
   }
 
-  await databases.updateDocument(DB_ID, 'bookings', bookingId, { status: nextStatus });
+  const update = { status: nextStatus };
+  // workSummary (plan §9.8 W6, from workerAssist mode=summary) is server-only same as status
+  // — a worker can only set it by passing through this transition, never a direct update.
+  if (nextStatus === 'completion_requested' && workSummary) update.workSummary = workSummary;
+  await databases.updateDocument(DB_ID, 'bookings', bookingId, update);
   await databases.createDocument(DB_ID, 'booking_status_history', 'unique()', {
     bookingId,
     status: nextStatus,

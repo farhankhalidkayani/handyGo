@@ -72,6 +72,76 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
     }
   }
 
+  /// Plan §9.8 W6: post-job work summary, generated from job notes + materials before
+  /// transitioning to completion_requested (workSummary is server-only, set only via this
+  /// transition — see transitionBooking.js).
+  Future<void> _markJobDone() async {
+    final notesController = TextEditingController();
+    final materialsController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Mark job as done'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: notesController,
+              decoration: const InputDecoration(labelText: 'Job notes'),
+              maxLines: 3,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: materialsController,
+              decoration: const InputDecoration(labelText: 'Materials used (comma-separated)'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Done')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final materials = materialsController.text
+          .split(',')
+          .map((m) => m.trim())
+          .where((m) => m.isNotEmpty)
+          .toList();
+      String? workSummary;
+      try {
+        final result = await AppServices.bookings.getWorkerAssist(
+          booking: _booking!,
+          mode: 'summary',
+          jobNotes: notesController.text.trim(),
+          materials: materials,
+        );
+        workSummary = result['summary'] as String?;
+      } catch (_) {
+        // summary is a nice-to-have — never block completion on it
+      }
+
+      await AppServices.bookings.transition(
+        bookingId: widget.bookingId,
+        nextStatus: BookingStatus.completionRequested,
+        changedByRole: 'worker',
+        changedById: widget.profile.id,
+        workSummary: workSummary,
+      );
+    } catch (e) {
+      setState(() => _error = 'Could not mark job done: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _submitOtp() async {
     setState(() {
       _busy = true;
@@ -186,7 +256,9 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
               ),
             ] else if (next != null)
               FilledButton(
-                onPressed: _busy ? null : () => _advance(next.$1),
+                onPressed: _busy
+                    ? null
+                    : () => next.$1 == BookingStatus.completionRequested ? _markJobDone() : _advance(next.$1),
                 child: _busy
                     ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator())
                     : Text(next.$2),

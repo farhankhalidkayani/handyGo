@@ -154,6 +154,7 @@ class BookingRepository {
     required String changedById,
     String? note,
     String? otp,
+    String? workSummary,
   }) {
     return aiRouter.call('transitionBooking', {
       'bookingId': bookingId,
@@ -162,6 +163,27 @@ class BookingRepository {
       'changedById': changedById,
       if (note != null) 'note': note,
       if (otp != null) 'otp': otp,
+      if (workSummary != null) 'workSummary': workSummary,
+    });
+  }
+
+  /// §9.8: W2/W3/W4 — suggested quote/tools/materials/offer message for a new job, or (mode
+  /// "summary") a post-job work summary from job notes + materials (W6). Falls back to a
+  /// deterministic mid-band quote / canned summary if the LLM tier is unavailable (see
+  /// functions/aiRouter/src/handlers/workerAssist.js).
+  Future<Map<String, dynamic>> getWorkerAssist({
+    required Booking booking,
+    String mode = 'quote',
+    List<String>? materials,
+    String? jobNotes,
+    String language = 'en',
+  }) {
+    return aiRouter.call('workerAssist', {
+      'mode': mode,
+      'booking': {'categoryId': booking.categoryId, 'problemText': booking.problemText},
+      if (jobNotes != null) 'jobNotes': jobNotes,
+      if (materials != null) 'materials': materials,
+      'language': language,
     });
   }
 
