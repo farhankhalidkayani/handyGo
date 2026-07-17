@@ -118,6 +118,29 @@ in `functions/eventRouter/src/handlers/translate.js` if this shows up often in r
 
 ---
 
+## 2d. SOS safety alerts
+
+Verified live end-to-end via script: create alert → risk assessment fires automatically →
+admin resolves via a real admin session. **Found and fixed a real bug in the process:**
+`aiSuggestedActions: parsed?.actions || CANNED_ACTIONS` never fell back to the canned list when
+the LLM returned an empty array — `[] || x` evaluates to `[]` in JS (empty arrays are truthy).
+Fixed to check `.length` explicitly. Also confirmed risk level is rules-based and unaffected by
+the LLM tier either way (`threat`/`violence`/`robbery`/`medical` → always `critical`).
+
+| # | Test | App | Steps | Expected | Status |
+|---|---|---|---|---|---|
+| 2d.1 | Hold-to-activate (too short) | Customer/Worker | On Tracking/Active Job screen, tap-and-release the red SOS button quickly | Nothing happens — the progress ring resets, no alert filed | 🔲 |
+| 2d.2 | Hold-to-activate (full 3s) | Customer/Worker | Press and hold the SOS button for the full 3 seconds | Progress ring fills, then an emergency-type picker dialog appears | 🔲 |
+| 2d.3 | File an alert | Customer/Worker | Pick an emergency type from the dialog | Snackbar "SOS sent. Admin has been alerted."; a `sos_alerts` document is created with `adminStatus: open` | ✅ (scripted) / 🔲 (UI) |
+| 2d.4 | Risk level always set, rules-based | Backend | Check the alert from 2d.3 a few seconds later | `aiRiskLevel` is `critical` for threat/violence/robbery/medical, `high` otherwise — set immediately regardless of LLM tier | ✅ (scripted) |
+| 2d.5 | Admin sees it live | Admin | SOS tab, open before/during 2d.3 | New alert card appears within ~1-2s, color-coded by risk level, with AI summary + suggested action chips once the processor finishes | 🔲 |
+| 2d.6 | Admin resolves alert | Admin | Tap "Mark safe" or "Close" on an alert | Card disappears from the open-alerts list; `sos_alerts.adminStatus` updates and `timeline` gets a new entry with the admin's authId + timestamp | ✅ (scripted) / 🔲 (UI) |
+| 2d.7 | Non-admin can't resolve alerts | — | Call `aiRouter` with `feature: updateSosStatus` using a customer/worker session | 403 `"admin role required"` (same pattern as 3.3, not yet scripted for this specific feature) | 🔲 |
+| 2d.8 | Unauthenticated call rejected | Backend | Call `updateSosStatus` via the server API key directly (no real session) | 401 `"no authenticated caller"` | ✅ |
+| 2d.9 | SOS never blocked by GPS | Customer/Worker | Deny location permission, then file an SOS | Alert still files successfully with `lat`/`lng` empty — never blocks on GPS | 🔲 |
+
+---
+
 ## 3. Security / permission checks
 
 These matter more than they look — Appwrite's default document permissions are easy to get
@@ -136,8 +159,11 @@ schema or permission change.
 
 ## 4. Known gaps (not yet built — don't file these as bugs)
 
-Additional-charge approval mid-job, live map/ETA rendering, cancel/dispute flows, SOS, photo/
-voice problem intake (text-only AI intake is done — §2b), workerAssist quote suggestions, and
-message translation — these are Phase 3+ per the plan's phase ordering (§13). Cloud LLM (Groq)
-is now configured and confirmed live (§2b) — §0.6's fallback-ladder behavior still applies if
-Groq itself is ever unreachable/rate-limited, just isn't the current normal path anymore.
+Additional-charge approval mid-job, live map/ETA rendering, cancel/dispute flows, photo/voice
+problem intake (text-only AI intake is done — §2b), workerAssist quote suggestions (backend
+feature exists, not wired into any screen yet), fraud reporting UI (backend `fraud` handler
+exists, unused), and the full SOS Control Center action set (Open Live Location, Call parties,
+Pause Booking, Block Payment, Cancel, Suspend — only Acknowledge/In progress/Mark safe/Close
+are built, §2d) — these are Phase 3+ per the plan's phase ordering (§13). Cloud LLM (Groq) is
+now configured and confirmed live (§2b) — §0.6's fallback-ladder behavior still applies if Groq
+itself is ever unreachable/rate-limited, just isn't the current normal path anymore.

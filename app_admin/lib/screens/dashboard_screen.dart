@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/app_services.dart';
 import 'auth_screen.dart';
 import 'bookings_screen.dart';
+import 'sos_control_center_body.dart';
 import 'verification_queue_body.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -11,6 +12,8 @@ class DashboardScreen extends StatefulWidget {
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
+
+const _titles = ['Worker verification queue', 'Live bookings', 'SOS Control Center'];
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _tab = 0;
@@ -28,12 +31,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_tab == 0 ? 'Worker verification queue' : 'Live bookings'),
+        title: Text(_titles[_tab]),
+        backgroundColor: _tab == 2 ? Colors.red.shade700 : null,
         actions: [IconButton(icon: const Icon(Icons.logout), onPressed: () => _logout(context))],
       ),
       body: IndexedStack(
         index: _tab,
-        children: const [VerificationQueueBody(), BookingsBody()],
+        children: const [VerificationQueueBody(), BookingsBody(), SosControlCenterBody()],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
@@ -41,6 +45,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.verified_user), label: 'Verifications'),
           NavigationDestination(icon: Icon(Icons.list_alt), label: 'Bookings'),
+          NavigationDestination(icon: Icon(Icons.sos), label: 'SOS'),
         ],
       ),
     );

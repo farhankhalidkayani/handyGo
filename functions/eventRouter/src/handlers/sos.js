@@ -22,7 +22,10 @@ module.exports = async function sos(alert, { error }) {
   await databases.updateDocument(DB_ID, 'sos_alerts', alert.$id, {
     aiRiskLevel: risk,
     aiSummary: parsed?.summary || `${alert.emergencyType} reported — immediate review needed.`,
-    aiSuggestedActions: parsed?.actions || CANNED_ACTIONS,
+    // `parsed?.actions || CANNED_ACTIONS` would look right but isn't: an empty array from the
+    // LLM is truthy in JS, so `[] || CANNED_ACTIONS` evaluates to `[]` — verified live, the
+    // model does sometimes return an empty actions list. Check .length explicitly instead.
+    aiSuggestedActions: parsed?.actions?.length ? parsed.actions : CANNED_ACTIONS,
   });
 
   await databases.createDocument(DB_ID, 'notifications', 'unique()', {

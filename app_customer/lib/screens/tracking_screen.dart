@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:handygo_shared/handygo_shared.dart';
 
 import '../services/app_services.dart';
+import '../widgets/sos_button.dart';
 import 'chat_screen.dart';
 import 'rating_screen.dart';
 
@@ -152,6 +153,12 @@ class _TrackingScreenState extends State<TrackingScreen> {
               ),
           ],
         ),
+      ),
+      floatingActionButton: SosButton(
+        raisedByRole: 'customer',
+        raisedById: widget.profile.id,
+        bookingId: widget.bookingId,
+        counterpartId: booking.workerId,
       ),
     );
   }

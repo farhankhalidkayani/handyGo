@@ -1048,6 +1048,7 @@
         {
             "$id": "sos_alerts",
             "$permissions": [
+                "create(\"users\")",
                 "read(\"users\")"
             ],
             "databaseId": "handygo",

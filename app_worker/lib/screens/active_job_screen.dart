@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:handygo_shared/handygo_shared.dart';
 
 import '../services/app_services.dart';
+import '../widgets/sos_button.dart';
 import 'chat_screen.dart';
 
 /// Drives the worker's side of the booking state machine (plan §7): confirmed ->
@@ -180,6 +181,12 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
               const Text('Waiting for the customer to confirm & pay.'),
           ],
         ),
+      ),
+      floatingActionButton: SosButton(
+        raisedByRole: 'worker',
+        raisedById: widget.profile.id,
+        bookingId: widget.bookingId,
+        counterpartId: booking.customerId,
       ),
     );
   }

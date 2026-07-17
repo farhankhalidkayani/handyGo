@@ -12,4 +12,5 @@ class AppServices {
   static final BookingRepository bookings = BookingRepository(client);
   static final OfferRepository offers = OfferRepository(client);
   static final MessageRepository messages = MessageRepository(client);
+  static final SosRepository sos = SosRepository(client);
 }

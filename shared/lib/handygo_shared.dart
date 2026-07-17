@@ -9,6 +9,7 @@ export 'src/ai_router_client.dart';
 export 'src/booking_repository.dart';
 export 'src/offer_repository.dart';
 export 'src/message_repository.dart';
+export 'src/sos_repository.dart';
 export 'src/models/user_profile.dart';
 export 'src/models/booking.dart';
 export 'src/models/worker_offer.dart';

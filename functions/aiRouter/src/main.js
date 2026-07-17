@@ -15,6 +15,7 @@ const handlers = {
   updateWorkerVerification: require('./handlers/updateWorkerVerification'),
   selectOffer: require('./handlers/selectOffer'),
   submitRating: require('./handlers/submitRating'),
+  updateSosStatus: require('./handlers/updateSosStatus'),
 };
 
 module.exports = async (ctx) => {
