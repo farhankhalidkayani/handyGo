@@ -12,6 +12,7 @@ class AppServices {
   static final AiRouterClient aiRouter = AiRouterClient(client);
   static final BookingRepository bookings = BookingRepository(client);
   static final SosRepository sos = SosRepository(client);
+  static final FraudRepository fraud = FraudRepository(client);
 
   /// Calls the `aiRouter` Function's `updateWorkerVerification` feature (admin-gated
   /// server-side via the caller's real Appwrite user id — see

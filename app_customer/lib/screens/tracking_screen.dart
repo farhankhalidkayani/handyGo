@@ -6,6 +6,7 @@ import '../services/app_services.dart';
 import '../widgets/sos_button.dart';
 import 'chat_screen.dart';
 import 'rating_screen.dart';
+import 'report_fraud_screen.dart';
 
 const _statusLabels = {
   BookingStatus.workerSelected: 'Worker selected — waiting for confirmation',
@@ -115,6 +116,19 @@ class _TrackingScreenState extends State<TrackingScreen> {
                   bookingId: widget.bookingId,
                   senderId: widget.profile.id,
                   senderRole: 'customer',
+                ),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.flag_outlined),
+            tooltip: 'Report an issue',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ReportFraudScreen(
+                  reportedById: widget.profile.id,
+                  bookingId: widget.bookingId,
+                  accusedId: booking.workerId,
                 ),
               ),
             ),

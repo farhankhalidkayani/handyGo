@@ -5,6 +5,7 @@ import 'package:handygo_shared/handygo_shared.dart';
 import '../services/app_services.dart';
 import '../widgets/sos_button.dart';
 import 'chat_screen.dart';
+import 'report_fraud_screen.dart';
 
 /// Drives the worker's side of the booking state machine (plan §7): confirmed ->
 /// worker_on_the_way -> worker_arrived -> (OTP) service_started -> in_progress ->
@@ -133,6 +134,19 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                   bookingId: widget.bookingId,
                   senderId: widget.profile.id,
                   senderRole: 'worker',
+                ),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.flag_outlined),
+            tooltip: 'Report an issue',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ReportFraudScreen(
+                  reportedById: widget.profile.id,
+                  bookingId: widget.bookingId,
+                  accusedId: booking.customerId,
                 ),
               ),
             ),

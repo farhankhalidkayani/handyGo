@@ -16,6 +16,7 @@ const handlers = {
   selectOffer: require('./handlers/selectOffer'),
   submitRating: require('./handlers/submitRating'),
   updateSosStatus: require('./handlers/updateSosStatus'),
+  updateFraudDecision: require('./handlers/updateFraudDecision'),
 };
 
 module.exports = async (ctx) => {

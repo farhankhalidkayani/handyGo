@@ -1168,6 +1168,7 @@
         {
             "$id": "fraud_reports",
             "$permissions": [
+                "create(\"users\")",
                 "read(\"users\")"
             ],
             "databaseId": "handygo",

@@ -154,6 +154,25 @@ schema or permission change.
 | 3.3 | Non-admin can't approve/reject workers | Call `aiRouter` with `feature: updateWorkerVerification` using a customer/worker session | 403 `"admin role required"` | 🔲 |
 | 3.4 | Unauthenticated call to admin feature | Call `updateWorkerVerification` via the server API key directly (no real user session) | 401 `"no authenticated caller"` | ✅ |
 | 3.5 | OTP required for service_started | Covered by 2.11/2.12 | — | ✅ |
+| 3.6 | Non-admin can't resolve SOS alerts | Call `aiRouter` with `feature: updateSosStatus` using a customer/worker session | 403 `"admin role required"` | 🔲 (deny path verified for updateFraudDecision — 3.7 — same code pattern, not yet scripted separately for this feature) |
+| 3.7 | Non-admin can't set fraud adminDecision | `seed` script: call `updateFraudDecision` with no session, then with a real admin session | 401 without a session, 200 + correct `adminDecision`/`status: resolved` with a real admin session | ✅ |
+
+---
+
+## 2e. Fraud reporting
+
+Verified live end-to-end via script: file report → `eventRouter`'s `fraud` handler fires
+automatically → `aiSummary`/`aiRecommendation` populate within ~10s → admin decision (both the
+401 deny-without-session and 200 allow-with-real-admin-session paths confirmed).
+
+| # | Test | App | Steps | Expected | Status |
+|---|---|---|---|---|---|
+| 2e.1 | File a report | Customer/Worker | Tracking (customer) or Active Job (worker) screen → flag icon → pick type + description → Submit | Snackbar confirms submission; a `fraud_reports` document is created with `status: open`, `adminDecision: pending` | ✅ (scripted) / 🔲 (UI) |
+| 2e.2 | AI summary + recommendation appear | Backend | Check the report from 2e.1 a few seconds later | `aiSummary` and `aiRecommendation` populate (one of refund/warning/suspension/ban/dismiss) — recommendation only, never auto-applied | ✅ (scripted) |
+| 2e.3 | Report validation | Customer/Worker | Tap "Submit report" with an empty description | Inline error "Please describe what happened", not submitted | 🔲 |
+| 2e.4 | Admin sees it live | Admin | Fraud tab, open before/during 2e.1 | New report card appears within ~1-2s with the AI summary/recommendation shown once the analyzer finishes | 🔲 |
+| 2e.5 | Admin makes a decision | Admin | Tap any decision button (dismissed/warning/refund/suspension/ban) | Card disappears from the open-reports list; `fraud_reports.adminDecision`/`status: resolved` update | ✅ (scripted) / 🔲 (UI) |
+| 2e.6 | Suspension/ban updates the accused's account | Backend | Pick "suspension" or "ban" in 2e.5 for a report with a real `accusedId` | The accused user's `users.status` updates to `suspended`/`blocked` | 🔲 (logic implemented in `updateFraudDecision.js`, not yet scripted) |
 
 ---
 
@@ -161,9 +180,9 @@ schema or permission change.
 
 Additional-charge approval mid-job, live map/ETA rendering, cancel/dispute flows, photo/voice
 problem intake (text-only AI intake is done — §2b), workerAssist quote suggestions (backend
-feature exists, not wired into any screen yet), fraud reporting UI (backend `fraud` handler
-exists, unused), and the full SOS Control Center action set (Open Live Location, Call parties,
-Pause Booking, Block Payment, Cancel, Suspend — only Acknowledge/In progress/Mark safe/Close
-are built, §2d) — these are Phase 3+ per the plan's phase ordering (§13). Cloud LLM (Groq) is
-now configured and confirmed live (§2b) — §0.6's fallback-ladder behavior still applies if Groq
+feature exists, not wired into any screen yet), and the full SOS Control Center action set (Open
+Live Location, Call parties, Pause Booking, Block Payment, Cancel, Suspend — only Acknowledge/
+In progress/Mark safe/Close are built, §2d) — these are Phase 3+ per the plan's phase ordering
+(§13). Fraud reporting is now built (§2e). Cloud LLM (Groq) is now configured and confirmed
+live (§2b) — §0.6's fallback-ladder behavior still applies if Groq
 itself is ever unreachable/rate-limited, just isn't the current normal path anymore.
