@@ -12,6 +12,7 @@ const handlers = {
   workerAssist: require('./handlers/workerAssist'),
   routePlanner: require('./handlers/routePlanner'),
   transitionBooking: require('./handlers/transitionBooking'),
+  updateWorkerVerification: require('./handlers/updateWorkerVerification'),
 };
 
 module.exports = async (ctx) => {

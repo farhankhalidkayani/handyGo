@@ -37,6 +37,7 @@ dependencies:
   appwrite: ^25.3.0
   handygo_shared:
     path: ../shared
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:

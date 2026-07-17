@@ -53,6 +53,7 @@
         {
             "$id": "users",
             "$permissions": [
+                "create(\"users\")",
                 "read(\"users\")"
             ],
             "databaseId": "handygo",
@@ -151,6 +152,7 @@
         {
             "$id": "customer_profiles",
             "$permissions": [
+                "create(\"users\")",
                 "read(\"users\")"
             ],
             "databaseId": "handygo",
@@ -227,6 +229,7 @@
         {
             "$id": "worker_profiles",
             "$permissions": [
+                "create(\"users\")",
                 "read(\"users\")"
             ],
             "databaseId": "handygo",

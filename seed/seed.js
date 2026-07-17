@@ -51,7 +51,10 @@ async function createDemoUser({ name, email, phone, role, language }) {
       throw e;
     });
 
-  await databases.createDocument(DB_ID, 'users', sdk.ID.unique(), {
+  // userDoc.$id (NOT authUser.$id) is what customer_profiles/worker_profiles.userId must
+  // reference — see plan §5.2/§5.3 "userId -> users.$id" and shared/ProfileRepository, which
+  // both link via the `users` collection document id, not the Appwrite Auth user id.
+  let userDoc = await databases.createDocument(DB_ID, 'users', sdk.ID.unique(), {
     authId: authUser.$id,
     role,
     name,
@@ -61,19 +64,23 @@ async function createDemoUser({ name, email, phone, role, language }) {
     status: 'active',
     riskScore: 0,
     createdVia: 'seed',
-  }).catch((e) => {
-    if (e.code !== 409) console.error(`  users doc for ${email}: ${e.message}`);
+  }).catch(async (e) => {
+    if (e.code === 409) {
+      const list = await databases.listDocuments(DB_ID, 'users', [sdk.Query.equal('authId', authUser.$id), sdk.Query.limit(1)]);
+      return list.documents[0];
+    }
+    throw e;
   });
 
-  return authUser;
+  return { authUser, userDoc };
 }
 
 async function seedCustomers() {
   console.log(`Seeding ${demo.customers.length} customer(s)...`);
   for (const c of demo.customers) {
-    const authUser = await createDemoUser({ ...c, role: 'customer' });
+    const { userDoc } = await createDemoUser({ ...c, role: 'customer' });
     await databases.createDocument(DB_ID, 'customer_profiles', sdk.ID.unique(), {
-      userId: authUser.$id,
+      userId: userDoc.$id,
       currentLat: c.lat,
       currentLng: c.lng,
       totalBookings: 0,
@@ -88,9 +95,9 @@ async function seedCustomers() {
 async function seedWorkers() {
   console.log(`Seeding ${demo.workers.length} worker(s)...`);
   for (const w of demo.workers) {
-    const authUser = await createDemoUser({ ...w, role: 'worker' });
+    const { userDoc } = await createDemoUser({ ...w, role: 'worker' });
     await databases.createDocument(DB_ID, 'worker_profiles', sdk.ID.unique(), {
-      userId: authUser.$id,
+      userId: userDoc.$id,
       skills: w.skills,
       experienceYears: 3,
       serviceAreaLat: w.lat,

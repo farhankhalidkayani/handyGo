@@ -90,17 +90,24 @@ async function createIndex(dbId, collectionId, index) {
 
   for (const col of config.collections) {
     console.log(`Collection: ${col.$id}`);
-    await ignoreConflict(
-      databases.createCollection(
-        col.databaseId,
-        col.$id,
-        col.name,
-        col.$permissions,
-        col.documentSecurity,
-        col.enabled
-      ),
-      col.$id
-    );
+    const created = await databases
+      .createCollection(col.databaseId, col.$id, col.name, col.$permissions, col.documentSecurity, col.enabled)
+      .then(() => true)
+      .catch((e) => {
+        if (e.code !== 409) throw e;
+        return false;
+      });
+
+    if (created) {
+      console.log(`  + ${col.$id}`);
+    } else {
+      // Already exists — sync permissions/settings in case appwrite.json changed since
+      // the collection was first created (e.g. adding a create() permission later).
+      await databases
+        .updateCollection(col.databaseId, col.$id, col.name, col.$permissions, col.documentSecurity, col.enabled)
+        .then(() => console.log(`  = ${col.$id} (synced permissions/settings)`))
+        .catch((e) => console.error(`  ! ${col.$id} permission sync failed: ${e.message}`));
+    }
 
     for (const attr of col.attributes) {
       await createAttribute(col.databaseId, col.$id, attr);
