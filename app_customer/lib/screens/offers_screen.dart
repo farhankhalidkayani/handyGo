@@ -37,6 +37,7 @@ class _OffersScreenState extends State<OffersScreen> {
       if (payload['bookingId'] != widget.bookingId) return;
       if (event.events.any((e) => e.contains('.create'))) {
         setState(() => _offers.add(WorkerOffer.fromMap(payload)));
+        _refreshComparison();
       } else if (event.events.any((e) => e.contains('.update'))) {
         setState(() {
           final i = _offers.indexWhere((o) => o.id == payload['\$id']);
@@ -45,6 +46,9 @@ class _OffersScreenState extends State<OffersScreen> {
       }
     });
   }
+
+  String? _bestMatchOfferId;
+  String? _topRatedOfferId;
 
   Future<void> _load() async {
     final offers = await AppServices.offers.listForBooking(widget.bookingId);
@@ -55,6 +59,21 @@ class _OffersScreenState extends State<OffersScreen> {
         ..addAll(offers);
       _loading = false;
     });
+    _refreshComparison();
+  }
+
+  Future<void> _refreshComparison() async {
+    if (_offers.where((o) => o.status == 'sent').isEmpty) return;
+    try {
+      final result = await AppServices.offers.compareOffers(widget.bookingId);
+      if (!mounted) return;
+      setState(() {
+        _bestMatchOfferId = result['bestMatchOfferId'] as String?;
+        _topRatedOfferId = result['topRatedOfferId'] as String?;
+      });
+    } catch (_) {
+      // best-effort — price/fastest tags still show without this
+    }
   }
 
   Future<void> _accept(WorkerOffer offer) async {
@@ -121,6 +140,8 @@ class _OffersScreenState extends State<OffersScreen> {
                         final tags = <String>[
                           if (offer == bestPrice) 'Best price',
                           if (offer == fastest) 'Fastest',
+                          if (offer.id == _topRatedOfferId) 'Top rated',
+                          if (offer.id == _bestMatchOfferId) 'Best match',
                         ];
                         return Card(
                           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

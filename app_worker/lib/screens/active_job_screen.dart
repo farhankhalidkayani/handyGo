@@ -1,6 +1,9 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:handygo_shared/handygo_shared.dart';
+import 'package:latlong2/latlong.dart' as latlong;
 
 import '../services/app_services.dart';
 import '../widgets/sos_button.dart';
@@ -35,6 +38,11 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
   bool _busy = false;
   String? _error;
 
+  latlong.LatLng? _workerPos;
+  int? _etaMins;
+  String? _etaSource;
+  bool _loadingRoute = false;
+
   @override
   void initState() {
     super.initState();
@@ -51,6 +59,48 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
     final booking = await AppServices.bookings.getBooking(widget.bookingId);
     if (!mounted) return;
     setState(() => _booking = booking);
+    if ([BookingStatus.confirmed, BookingStatus.workerOnTheWay].contains(booking.status)) {
+      _refreshRoute(booking);
+    }
+  }
+
+  /// Plan §9.8 W5 / §12 "Navigation": worker's live position -> OSRM ETA to the job address.
+  /// Refreshed on demand (map tap) rather than polled, to keep this within FYP effort bounds.
+  Future<void> _refreshRoute(Booking booking) async {
+    setState(() => _loadingRoute = true);
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      final result = await AppServices.bookings.getRoutePlan(
+        bookingId: booking.id,
+        workerLat: position.latitude,
+        workerLng: position.longitude,
+        jobLat: booking.lat,
+        jobLng: booking.lng,
+      );
+      final workerProfile = await AppServices.profiles.findWorkerProfileByUserId(widget.profile.id);
+      if (workerProfile != null) {
+        AppServices.profiles
+            .updateWorkerLocation(
+              workerProfileId: workerProfile.id,
+              lat: position.latitude,
+              lng: position.longitude,
+            )
+            .catchError((_) {});
+      }
+      final route = (result['route'] as List?)?.cast<Map<String, dynamic>>();
+      if (!mounted) return;
+      setState(() {
+        _workerPos = latlong.LatLng(position.latitude, position.longitude);
+        _etaMins = route?.isNotEmpty == true ? (route!.first['etaMins'] as num?)?.toInt() : null;
+        _etaSource = route?.isNotEmpty == true ? route!.first['etaSource'] as String? : null;
+      });
+    } catch (_) {
+      // location permission denied / OSRM unreachable — ETA is a nice-to-have, never block the job
+    } finally {
+      if (mounted) setState(() => _loadingRoute = false);
+    }
   }
 
   Future<void> _advance(BookingStatus next) async {
@@ -319,6 +369,55 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
             Text(booking.problemText),
             Text(booking.addressText),
             if (booking.finalQuote != null) Text('Quote: Rs. ${booking.finalQuote!.toStringAsFixed(0)}'),
+            if ([BookingStatus.confirmed, BookingStatus.workerOnTheWay].contains(booking.status)) ...[
+              const SizedBox(height: 16),
+              if (_workerPos != null)
+                SizedBox(
+                  height: 180,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: FlutterMap(
+                      options: MapOptions(
+                        initialCenter: _workerPos!,
+                        initialZoom: 13,
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.handygo.worker',
+                        ),
+                        MarkerLayer(markers: [
+                          Marker(
+                            point: _workerPos!,
+                            child: const Icon(Icons.my_location, color: Colors.blue),
+                          ),
+                          Marker(
+                            point: latlong.LatLng(booking.lat, booking.lng),
+                            child: const Icon(Icons.location_on, color: Colors.red),
+                          ),
+                        ]),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  if (_loadingRoute)
+                    const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  else if (_etaMins != null)
+                    Text('ETA: ~$_etaMins mins${_etaSource == 'straight-line-fallback' ? ' (estimated)' : ''}')
+                  else
+                    const Text('ETA unavailable'),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: _loadingRoute ? null : () => _refreshRoute(booking),
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('Refresh'),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 24),
             if (_error != null)
               Padding(

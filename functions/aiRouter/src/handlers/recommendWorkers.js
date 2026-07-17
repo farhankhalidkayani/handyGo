@@ -14,7 +14,57 @@ function haversineKm(a, b) {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
+// C6: multi-criteria comparison across the offers already sent for one booking — best price /
+// fastest / top rated are simple mins/maxes; best match is the same blended score as C5,
+// persisted onto the winning worker_offers doc so every viewer (customer/admin) sees one answer.
+async function compareOffers(body) {
+  const { bookingId } = body;
+  if (!bookingId) return { status: 400, body: { error: 'bookingId is required' } };
+
+  const databases = getDatabases();
+  const offersRes = await databases.listDocuments(DB_ID, 'worker_offers', [
+    Query.equal('bookingId', bookingId),
+    Query.equal('status', 'sent'),
+    Query.limit(100),
+  ]);
+  const offers = offersRes.documents;
+  if (!offers.length) return { status: 200, body: { bookingId, offers: [] } };
+
+  const workersRes = await databases.listDocuments(DB_ID, 'worker_profiles', [
+    Query.equal('userId', offers.map((o) => o.workerId)),
+    Query.limit(100),
+  ]);
+  const workerByUserId = new Map(workersRes.documents.map((w) => [w.userId, w]));
+
+  const scored = offers.map((o) => {
+    const worker = workerByUserId.get(o.workerId);
+    const rating = worker?.rating || 0;
+    const jobsCompleted = worker?.jobsCompleted || 0;
+    const dist = o.distanceKm || 0;
+    return {
+      offerId: o.$id,
+      rating,
+      score: rating * 20 - dist * 3 + Math.min(jobsCompleted, 50) * 0.4,
+    };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  const bestMatchId = scored[0].offerId;
+  const topRatedId = [...scored].sort((a, b) => b.rating - a.rating)[0].offerId;
+
+  await Promise.all(
+    offers.map((o) =>
+      databases
+        .updateDocument(DB_ID, 'worker_offers', o.$id, { isBestMatch: o.$id === bestMatchId })
+        .catch(() => {})
+    )
+  );
+
+  return { status: 200, body: { bookingId, bestMatchOfferId: bestMatchId, topRatedOfferId: topRatedId } };
+}
+
 module.exports = async function recommendWorkers(body) {
+  if (body.mode === 'compareOffers') return compareOffers(body);
+
   const { bookingId, categoryName, lat, lng, radiusKm = 8 } = body;
   if (lat === undefined || lng === undefined || !categoryName) {
     return { status: 400, body: { error: 'categoryName, lat, lng are required' } };

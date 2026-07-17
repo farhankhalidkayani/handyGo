@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:handygo_shared/handygo_shared.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:record/record.dart';
 
 import '../services/app_services.dart';
 import 'offers_screen.dart';
@@ -32,6 +35,12 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
   List<ServiceCategory> _categories = [];
   final List<String> _uploadedImageIds = [];
   bool _uploadingImage = false;
+  final _recorder = AudioRecorder();
+  bool _recording = false;
+  String? _voiceNoteId;
+  bool _uploadingVoiceNote = false;
+  final List<int> _voiceNoteBuffer = [];
+  StreamSubscription<List<int>>? _voiceNoteSub;
 
   /// Plan §12: "Service request: manual / AI chatbot / image". Auto-captioning the photo into
   /// the AI classifier needs a vision model and isn't wired up — this attaches the photo to
@@ -49,6 +58,43 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
     } finally {
       if (mounted) setState(() => _uploadingImage = false);
     }
+  }
+
+  /// Plan §12/C2 "voice" intake path — attachment only (see media_repository.dart for why
+  /// transcription is out of scope). `startStream` is used instead of `start(path:)` so this
+  /// also works on Flutter web, where there's no filesystem path to record into.
+  Future<void> _toggleRecording() async {
+    if (_recording) {
+      await _voiceNoteSub?.cancel();
+      await _recorder.stop();
+      setState(() => _recording = false);
+      if (_voiceNoteBuffer.isEmpty) return;
+      setState(() => _uploadingVoiceNote = true);
+      try {
+        final fileId = await AppServices.media.uploadAudio(
+          bytes: List<int>.from(_voiceNoteBuffer),
+          filename: 'voice_note_${DateTime.now().millisecondsSinceEpoch}.wav',
+        );
+        setState(() => _voiceNoteId = fileId);
+      } catch (e) {
+        setState(() => _error = 'Could not attach voice note: $e');
+      } finally {
+        if (mounted) setState(() => _uploadingVoiceNote = false);
+      }
+      return;
+    }
+
+    if (!await _recorder.hasPermission()) {
+      setState(() => _error = 'Microphone permission denied');
+      return;
+    }
+    _voiceNoteBuffer.clear();
+    final stream = await _recorder.startStream(const RecordConfig(encoder: AudioEncoder.wav));
+    _voiceNoteSub = stream.listen(_voiceNoteBuffer.addAll);
+    setState(() {
+      _recording = true;
+      _voiceNoteId = null;
+    });
   }
 
   Future<void> _getEstimate() async {
@@ -102,6 +148,7 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
         categoryId: _selectedCategoryId!,
         problemText: _problemController.text.trim(),
         problemImages: _uploadedImageIds,
+        voiceNoteUrl: _voiceNoteId,
         addressText: _addressController.text.trim(),
         lat: lat,
         lng: lng,
@@ -129,6 +176,8 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
   void dispose() {
     _problemController.dispose();
     _addressController.dispose();
+    _voiceNoteSub?.cancel();
+    _recorder.dispose();
     super.dispose();
   }
 
@@ -208,6 +257,18 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
                 label: Text(_uploadedImageIds.isEmpty
                     ? 'Attach a photo'
                     : '${_uploadedImageIds.length} photo(s) attached — add another'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _uploadingVoiceNote ? null : _toggleRecording,
+                icon: _uploadingVoiceNote
+                    ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Icon(_recording ? Icons.stop_circle_outlined : Icons.mic_none),
+                label: Text(_recording
+                    ? 'Stop recording'
+                    : _voiceNoteId != null
+                        ? 'Voice note attached — tap to re-record'
+                        : 'Record a voice note'),
               ),
               const SizedBox(height: 16),
               TextField(

@@ -10,6 +10,7 @@ class Booking {
   final bool detectedByAi;
   final String problemText;
   final List<String> problemImages;
+  final String? voiceNoteUrl;
   final String addressText;
   final double lat;
   final double lng;
@@ -36,6 +37,7 @@ class Booking {
     this.detectedByAi = false,
     required this.problemText,
     this.problemImages = const [],
+    this.voiceNoteUrl,
     this.addressText = '',
     required this.lat,
     required this.lng,
@@ -63,6 +65,7 @@ class Booking {
         detectedByAi: map['detectedByAI'] as bool? ?? false,
         problemText: map['problemText'] as String? ?? '',
         problemImages: (map['problemImages'] as List?)?.cast<String>() ?? const [],
+        voiceNoteUrl: map['voiceNoteUrl'] as String?,
         addressText: map['addressText'] as String? ?? '',
         lat: (map['lat'] as num).toDouble(),
         lng: (map['lng'] as num).toDouble(),

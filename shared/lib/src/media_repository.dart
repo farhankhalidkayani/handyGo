@@ -12,7 +12,18 @@ class MediaRepository {
 
   MediaRepository(Client client) : storage = Storage(client);
 
-  Future<String> uploadImage({required List<int> bytes, required String filename}) async {
+  Future<String> uploadImage({required List<int> bytes, required String filename}) {
+    return uploadFile(bytes: bytes, filename: filename);
+  }
+
+  /// Voice-note attachment for problem intake (plan's `bookings.voiceNoteUrl`) — attachment
+  /// only, no on-device/server transcription (Vosk STT is a follow-up per the plan's own
+  /// tiered AI-cost notes; text/photo intake already covers the MVP demo path).
+  Future<String> uploadAudio({required List<int> bytes, required String filename}) {
+    return uploadFile(bytes: bytes, filename: filename);
+  }
+
+  Future<String> uploadFile({required List<int> bytes, required String filename}) async {
     final file = await storage.createFile(
       bucketId: Buckets.problemMedia,
       fileId: ID.unique(),

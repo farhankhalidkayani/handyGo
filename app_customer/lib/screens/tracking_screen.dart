@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:handygo_shared/handygo_shared.dart';
+import 'package:latlong2/latlong.dart' as latlong;
 
 import '../services/app_services.dart';
 import '../widgets/sos_button.dart';
@@ -35,11 +39,16 @@ class TrackingScreen extends StatefulWidget {
   State<TrackingScreen> createState() => _TrackingScreenState();
 }
 
+const _trackedStatuses = [BookingStatus.confirmed, BookingStatus.workerOnTheWay];
+
 class _TrackingScreenState extends State<TrackingScreen> {
   Booking? _booking;
   RealtimeSubscription? _subscription;
   bool _busy = false;
   String? _error;
+
+  latlong.LatLng? _workerPos;
+  Timer? _pollTimer;
 
   @override
   void initState() {
@@ -50,6 +59,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
       final payload = event.payload;
       if (payload['\$id'] != widget.bookingId) return;
       setState(() => _booking = Booking.fromMap(payload));
+      _syncPolling();
     });
   }
 
@@ -57,6 +67,29 @@ class _TrackingScreenState extends State<TrackingScreen> {
     final booking = await AppServices.bookings.getBooking(widget.bookingId);
     if (!mounted) return;
     setState(() => _booking = booking);
+    _syncPolling();
+  }
+
+  void _syncPolling() {
+    final booking = _booking;
+    final shouldPoll = booking != null && _trackedStatuses.contains(booking.status);
+    if (shouldPoll && _pollTimer == null) {
+      _fetchWorkerPosition();
+      _pollTimer = Timer.periodic(const Duration(seconds: 15), (_) => _fetchWorkerPosition());
+    } else if (!shouldPoll && _pollTimer != null) {
+      _pollTimer!.cancel();
+      _pollTimer = null;
+    }
+  }
+
+  /// Shows the worker's last-known ping (see active_job_screen.dart's `_refreshRoute`) rather
+  /// than true continuous tracking — a background location service is out of scope for the FYP.
+  Future<void> _fetchWorkerPosition() async {
+    final workerId = _booking?.workerId;
+    if (workerId == null) return;
+    final workerProfile = await AppServices.profiles.findWorkerProfileByUserId(workerId);
+    if (!mounted || workerProfile?.currentLat == null || workerProfile?.currentLng == null) return;
+    setState(() => _workerPos = latlong.LatLng(workerProfile!.currentLat!, workerProfile.currentLng!));
   }
 
   Future<void> _confirmAndPay() async {
@@ -145,6 +178,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
   @override
   void dispose() {
     _subscription?.close();
+    _pollTimer?.cancel();
     super.dispose();
   }
 
@@ -203,6 +237,31 @@ class _TrackingScreenState extends State<TrackingScreen> {
               const SizedBox(height: 16),
             ],
             if (booking.finalQuote != null) Text('Quote: Rs. ${booking.finalQuote!.toStringAsFixed(0)}'),
+            if (_trackedStatuses.contains(booking.status) && _workerPos != null) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 180,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: FlutterMap(
+                    options: MapOptions(initialCenter: _workerPos!, initialZoom: 13),
+                    children: [
+                      TileLayer(
+                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.handygo.customer',
+                      ),
+                      MarkerLayer(markers: [
+                        Marker(point: _workerPos!, child: const Icon(Icons.my_location, color: Colors.blue)),
+                        Marker(
+                          point: latlong.LatLng(booking.lat, booking.lng),
+                          child: const Icon(Icons.location_on, color: Colors.red),
+                        ),
+                      ]),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const Spacer(),
             if (_error != null)
               Padding(

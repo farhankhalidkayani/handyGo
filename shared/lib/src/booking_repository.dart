@@ -27,6 +27,7 @@ class BookingRepository {
     required String categoryId,
     required String problemText,
     List<String> problemImages = const [],
+    String? voiceNoteUrl,
     required String addressText,
     required double lat,
     required double lng,
@@ -47,6 +48,7 @@ class BookingRepository {
         'categoryId': categoryId,
         'problemText': problemText,
         if (problemImages.isNotEmpty) 'problemImages': problemImages,
+        if (voiceNoteUrl != null) 'voiceNoteUrl': voiceNoteUrl,
         'addressText': addressText,
         'lat': lat,
         'lng': lng,
@@ -216,6 +218,26 @@ class BookingRepository {
       if (jobNotes != null) 'jobNotes': jobNotes,
       if (materials != null) 'materials': materials,
       'language': language,
+    });
+  }
+
+  /// §9.8 W5: ETA + arrival estimate for the worker's current position -> this job's address,
+  /// via OSRM (falls back to a straight-line estimate server-side if OSRM is unreachable — see
+  /// functions/aiRouter/src/handlers/routePlanner.js). Single-job call; the handler also
+  /// supports multi-stop ordering but the app only ever has one active job at a time.
+  Future<Map<String, dynamic>> getRoutePlan({
+    required String bookingId,
+    required double workerLat,
+    required double workerLng,
+    required double jobLat,
+    required double jobLng,
+  }) {
+    return aiRouter.call('routePlanner', {
+      'workerLat': workerLat,
+      'workerLng': workerLng,
+      'jobs': [
+        {'bookingId': bookingId, 'lat': jobLat, 'lng': jobLng},
+      ],
     });
   }
 

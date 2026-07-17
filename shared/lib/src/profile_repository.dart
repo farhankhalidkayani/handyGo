@@ -138,6 +138,22 @@ class ProfileRepository {
     );
   }
 
+  /// Best-effort location ping — lets the customer's tracking screen show roughly where the
+  /// worker is. Not a continuous live-tracking feed (would need a background location service);
+  /// updated opportunistically whenever the worker app already fetches a GPS fix for ETA.
+  Future<void> updateWorkerLocation({
+    required String workerProfileId,
+    required double lat,
+    required double lng,
+  }) {
+    return databases.updateDocument(
+      databaseId: HandyGoConfig.databaseId,
+      collectionId: Collections.workerProfiles,
+      documentId: workerProfileId,
+      data: {'currentLat': lat, 'currentLng': lng},
+    );
+  }
+
   Future<WorkerProfile?> findWorkerProfileByUserId(String userId) async {
     final res = await databases.listDocuments(
       databaseId: HandyGoConfig.databaseId,

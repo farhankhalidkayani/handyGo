@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/app_services.dart';
+import 'analytics_body.dart';
 import 'auth_screen.dart';
 import 'bookings_screen.dart';
 import 'fraud_reports_body.dart';
@@ -15,7 +16,14 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-const _titles = ['Worker verification queue', 'Live bookings', 'SOS Control Center', 'Fraud reports', 'Notifications'];
+const _titles = [
+  'Worker verification queue',
+  'Live bookings',
+  'SOS Control Center',
+  'Fraud reports',
+  'Notifications',
+  'Analytics',
+];
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _tab = 0;
@@ -45,6 +53,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           SosControlCenterBody(),
           FraudReportsBody(),
           NotificationsBody(),
+          AnalyticsBody(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -56,6 +65,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           NavigationDestination(icon: Icon(Icons.sos), label: 'SOS'),
           NavigationDestination(icon: Icon(Icons.report_problem), label: 'Fraud'),
           NavigationDestination(icon: Icon(Icons.notifications), label: 'Alerts'),
+          NavigationDestination(icon: Icon(Icons.bar_chart), label: 'Analytics'),
         ],
       ),
     );

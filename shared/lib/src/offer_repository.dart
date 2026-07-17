@@ -1,5 +1,6 @@
 import 'package:appwrite/appwrite.dart';
 
+import 'ai_router_client.dart';
 import 'appwrite_config.dart';
 import 'models/worker_offer.dart';
 
@@ -9,10 +10,12 @@ import 'models/worker_offer.dart';
 class OfferRepository {
   final Databases databases;
   final Realtime realtime;
+  final AiRouterClient aiRouter;
 
   OfferRepository(Client client)
       : databases = Databases(client),
-        realtime = Realtime(client);
+        realtime = Realtime(client),
+        aiRouter = AiRouterClient(client);
 
   Future<WorkerOffer> createOffer({
     required String bookingId,
@@ -50,6 +53,13 @@ class OfferRepository {
       queries: [Query.equal('bookingId', bookingId), Query.orderAsc('\$createdAt'), Query.limit(50)],
     );
     return res.documents.map((d) => WorkerOffer.fromMap({...d.data, '\$id': d.$id})).toList();
+  }
+
+  /// C6 (plan §9.6): recomputes the blended best-match score across every `sent` offer for
+  /// this booking and persists `isBestMatch` on the winner. Returns the winning offer ids so
+  /// the UI can tag them without a second round trip; safe to call repeatedly (idempotent).
+  Future<Map<String, dynamic>> compareOffers(String bookingId) {
+    return aiRouter.call('recommendWorkers', {'mode': 'compareOffers', 'bookingId': bookingId});
   }
 
   RealtimeSubscription subscribeToOffers() {
