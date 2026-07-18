@@ -12,8 +12,17 @@ class ChatScreen extends StatefulWidget {
   final String bookingId;
   final String senderId;
   final String senderRole; // 'customer' | 'worker'
+  /// Non-null = one worker's private pre-offer thread (plan's "ask a question before
+  /// offering") rather than the normal active-job chat — see message_repository.dart.
+  final String? threadWorkerId;
 
-  const ChatScreen({super.key, required this.bookingId, required this.senderId, required this.senderRole});
+  const ChatScreen({
+    super.key,
+    required this.bookingId,
+    required this.senderId,
+    required this.senderRole,
+    this.threadWorkerId,
+  });
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -34,6 +43,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _subscription!.stream.listen((event) {
       final payload = event.payload;
       if (payload['bookingId'] != widget.bookingId) return;
+      if (payload['threadWorkerId'] != widget.threadWorkerId) return;
       final message = Message.fromMap(payload);
       setState(() {
         final i = _messages.indexWhere((m) => m.id == message.id);
@@ -47,7 +57,10 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _load() async {
-    final messages = await AppServices.messages.listForBooking(widget.bookingId);
+    final messages = await AppServices.messages.listForBooking(
+      widget.bookingId,
+      threadWorkerId: widget.threadWorkerId,
+    );
     if (!mounted) return;
     setState(() {
       _messages
@@ -68,6 +81,7 @@ class _ChatScreenState extends State<ChatScreen> {
         senderId: widget.senderId,
         senderRole: widget.senderRole,
         text: text,
+        threadWorkerId: widget.threadWorkerId,
       );
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -84,7 +98,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Chat')),
+      appBar: AppBar(title: Text(widget.threadWorkerId != null ? 'Question from a worker' : 'Chat')),
       body: Column(
         children: [
           Expanded(

@@ -11,6 +11,7 @@ class Message {
   final String? detectedLang;
   final bool aiFlagged;
   final String? flagReason;
+  final String? threadWorkerId;
 
   const Message({
     required this.id,
@@ -22,6 +23,7 @@ class Message {
     this.detectedLang,
     this.aiFlagged = false,
     this.flagReason,
+    this.threadWorkerId,
   });
 
   factory Message.fromMap(Map<String, dynamic> map) => Message(
@@ -34,5 +36,6 @@ class Message {
         detectedLang: map['detectedLang'] as String?,
         aiFlagged: map['aiFlagged'] as bool? ?? false,
         flagReason: map['flagReason'] as String?,
+        threadWorkerId: map['threadWorkerId'] as String?,
       );
 }

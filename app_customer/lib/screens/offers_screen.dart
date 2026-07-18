@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:handygo_shared/handygo_shared.dart';
 
 import '../services/app_services.dart';
+import 'chat_screen.dart';
 import 'nearby_workers_screen.dart';
 import 'tracking_screen.dart';
 
@@ -87,6 +88,54 @@ class _OffersScreenState extends State<OffersScreen> {
     }
   }
 
+  /// Plan's "ask a question before offering" — each worker who has messaged gets their own
+  /// private thread (message_repository.dart's threadWorkerId), so this shows a picker rather
+  /// than jumping straight into one unattributed shared chat.
+  Future<void> _openQuestions() async {
+    List<String> workerIds;
+    try {
+      workerIds = await AppServices.messages.listPreOfferThreadWorkerIds(widget.bookingId);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = 'Could not load questions: $e');
+      return;
+    }
+    if (!mounted) return;
+    if (workerIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No workers have asked a question yet.')),
+      );
+      return;
+    }
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: workerIds
+              .map((workerId) => ListTile(
+                    leading: const Icon(Icons.person_outline),
+                    title: const Text('Worker question'),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ChatScreen(
+                            bookingId: widget.bookingId,
+                            senderId: widget.profile.id,
+                            senderRole: 'customer',
+                            threadWorkerId: workerId,
+                          ),
+                        ),
+                      );
+                    },
+                  ))
+              .toList(),
+        ),
+      ),
+    );
+  }
+
   void _openNearbyWorkers() {
     final booking = _booking;
     final categoryName = _categoryName;
@@ -161,6 +210,11 @@ class _OffersScreenState extends State<OffersScreen> {
       appBar: AppBar(
         title: const Text('Compare offers'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.question_answer_outlined),
+            tooltip: 'Questions from workers',
+            onPressed: _openQuestions,
+          ),
           if (_categoryName != null)
             IconButton(
               icon: const Icon(Icons.travel_explore_outlined),

@@ -833,6 +833,12 @@
                     "key": "readAt",
                     "type": "datetime",
                     "required": false
+                },
+                {
+                    "key": "threadWorkerId",
+                    "type": "string",
+                    "size": 64,
+                    "required": false
                 }
             ],
             "indexes": [

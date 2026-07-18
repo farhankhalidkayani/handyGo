@@ -3,6 +3,7 @@ import 'package:handygo_shared/handygo_shared.dart';
 
 import '../services/app_services.dart';
 import 'active_job_screen.dart';
+import 'chat_screen.dart';
 import 'language_select_screen.dart';
 import 'notifications_screen.dart';
 import 'safety_center_screen.dart';
@@ -250,6 +251,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         icon: const Icon(Icons.close),
                                         tooltip: 'Decline — hide from my list',
                                         onPressed: () => setState(() => _declinedJobIds.add(b.id)),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.chat_bubble_outline),
+                                        tooltip: 'Ask the customer a question before offering',
+                                        onPressed: () => Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => ChatScreen(
+                                              bookingId: b.id,
+                                              senderId: widget.profile.id,
+                                              senderRole: 'worker',
+                                              threadWorkerId: widget.profile.id,
+                                            ),
+                                          ),
+                                        ),
                                       ),
                                       FilledButton(
                                         onPressed: () => _sendOffer(b),
