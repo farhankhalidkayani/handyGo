@@ -126,6 +126,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
         workerLng: position.longitude,
         jobLat: booking.lat,
         jobLng: booking.lng,
+        scheduledAt: booking.scheduledAt,
       );
       final workerProfile = await AppServices.profiles.findWorkerProfileByUserId(widget.profile.id);
       if (workerProfile != null) {
@@ -446,6 +447,9 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
             const SizedBox(height: 8),
             Text(booking.problemText),
             Text(booking.addressText),
+            if (booking.scheduledAt != null)
+              Text('Scheduled for: ${booking.scheduledAt!.toLocal()}'.split('.').first,
+                  style: const TextStyle(fontStyle: FontStyle.italic)),
             if (booking.finalQuote != null) Text('Quote: Rs. ${booking.finalQuote!.toStringAsFixed(0)}'),
             if (booking.paused) ...[
               const SizedBox(height: 8),

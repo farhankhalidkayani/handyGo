@@ -38,6 +38,7 @@ class BookingRepository {
     String? aiUrgency,
     double? aiConfidence,
     String? aiSuggestedSolution,
+    DateTime? scheduledAt,
   }) async {
     final doc = await databases.createDocument(
       databaseId: HandyGoConfig.databaseId,
@@ -61,6 +62,7 @@ class BookingRepository {
         if (aiUrgency != null) 'aiUrgency': aiUrgency,
         if (aiConfidence != null) 'aiConfidence': aiConfidence,
         if (aiSuggestedSolution != null) 'aiSuggestedSolution': aiSuggestedSolution,
+        if (scheduledAt != null) 'scheduledAt': scheduledAt.toUtc().toIso8601String(),
       },
       // Explicit empty permissions — Appwrite otherwise grants the creating session
       // implicit owner write access, which would let a customer bypass the state machine
@@ -257,12 +259,18 @@ class BookingRepository {
     required double workerLng,
     required double jobLat,
     required double jobLng,
+    DateTime? scheduledAt,
   }) {
     return aiRouter.call('routePlanner', {
       'workerLat': workerLat,
       'workerLng': workerLng,
       'jobs': [
-        {'bookingId': bookingId, 'lat': jobLat, 'lng': jobLng},
+        {
+          'bookingId': bookingId,
+          'lat': jobLat,
+          'lng': jobLng,
+          if (scheduledAt != null) 'scheduledAt': scheduledAt.toUtc().toIso8601String(),
+        },
       ],
     });
   }

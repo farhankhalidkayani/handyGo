@@ -262,6 +262,9 @@ class _TrackingScreenState extends State<TrackingScreen> {
               Text(booking.otp!, style: Theme.of(context).textTheme.displaySmall),
               const SizedBox(height: 16),
             ],
+            if (booking.scheduledAt != null)
+              Text('Scheduled for: ${booking.scheduledAt!.toLocal()}'.split('.').first,
+                  style: const TextStyle(fontStyle: FontStyle.italic)),
             if (booking.finalQuote != null) Text('Quote: Rs. ${booking.finalQuote!.toStringAsFixed(0)}'),
             if (booking.paused) ...[
               const SizedBox(height: 8),

@@ -52,8 +52,12 @@ module.exports = async function routePlanner(body) {
     cursor = { lat: job.lat, lng: job.lng };
   }
 
+  // Every job's own scheduledAt is checked, including the first — the app's real call pattern
+  // is always a single job (see booking_repository.dart's getRoutePlan), so starting at index
+  // 1 here used to mean conflicts could never actually be detected. Found while wiring the
+  // "book for later" flow that finally gives scheduledAt a real value to check against.
   const conflicts = [];
-  for (let i = 1; i < ordered.length; i++) {
+  for (let i = 0; i < ordered.length; i++) {
     if (ordered[i].scheduledAt) {
       const scheduled = new Date(ordered[i].scheduledAt).getTime();
       const arrival = new Date(ordered[i].estimatedArrival).getTime();

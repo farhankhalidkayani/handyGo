@@ -27,12 +27,26 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
   String? _selectedCategoryId;
   bool _submitting = false;
   String? _error;
+  DateTime? _scheduledAt;
 
   @override
   void initState() {
     super.initState();
     _categoriesFuture = AppServices.categories.listAll();
     _selectedCategoryId = widget.initialCategoryId;
+  }
+
+  Future<void> _pickSchedule() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(hours: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 30)),
+    );
+    if (date == null || !mounted) return;
+    final time = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+    if (time == null || !mounted) return;
+    setState(() => _scheduledAt = DateTime(date.year, date.month, date.day, time.hour, time.minute));
   }
 
   Future<void> _submit() async {
@@ -66,6 +80,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
         addressText: _addressController.text.trim(),
         lat: lat,
         lng: lng,
+        scheduledAt: _scheduledAt,
       );
 
       if (!mounted) return;
@@ -128,6 +143,19 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
                 decoration: const InputDecoration(labelText: 'Address'),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Address is required' : null,
               ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: _pickSchedule,
+                icon: const Icon(Icons.schedule_outlined),
+                label: Text(_scheduledAt == null
+                    ? 'Book now (tap to schedule for later instead)'
+                    : 'Scheduled: ${_scheduledAt!.toLocal()}'.split('.').first),
+              ),
+              if (_scheduledAt != null)
+                TextButton(
+                  onPressed: () => setState(() => _scheduledAt = null),
+                  child: const Text('Cancel scheduling — book now instead'),
+                ),
               const SizedBox(height: 24),
               if (_error != null)
                 Padding(

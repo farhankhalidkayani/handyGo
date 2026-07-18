@@ -41,6 +41,20 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
   bool _uploadingVoiceNote = false;
   final List<int> _voiceNoteBuffer = [];
   StreamSubscription<List<int>>? _voiceNoteSub;
+  DateTime? _scheduledAt;
+
+  Future<void> _pickSchedule() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(hours: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 30)),
+    );
+    if (date == null || !mounted) return;
+    final time = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+    if (time == null || !mounted) return;
+    setState(() => _scheduledAt = DateTime(date.year, date.month, date.day, time.hour, time.minute));
+  }
 
   /// Plan §12/C4: "Service request: manual / AI chatbot / image". Attaching a photo before
   /// getting an estimate feeds it to a vision model server-side (intake.js's `captionImage`)
@@ -166,6 +180,7 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
         aiUrgency: estimate['urgency'] as String?,
         aiConfidence: (estimate['confidence'] as num?)?.toDouble(),
         aiSuggestedSolution: estimate['solution'] as String?,
+        scheduledAt: _scheduledAt,
       );
 
       if (!mounted) return;
@@ -292,6 +307,19 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
                 controller: _addressController,
                 decoration: const InputDecoration(labelText: 'Address'),
               ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _pickSchedule,
+                icon: const Icon(Icons.schedule_outlined),
+                label: Text(_scheduledAt == null
+                    ? 'Book now (tap to schedule for later instead)'
+                    : 'Scheduled: ${_scheduledAt!.toLocal()}'.split('.').first),
+              ),
+              if (_scheduledAt != null)
+                TextButton(
+                  onPressed: () => setState(() => _scheduledAt = null),
+                  child: const Text('Cancel scheduling — book now instead'),
+                ),
               const SizedBox(height: 16),
               if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
               FilledButton(

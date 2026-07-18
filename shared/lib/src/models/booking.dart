@@ -30,6 +30,7 @@ class Booking {
   final String? pendingAdditionalChargeReason;
   final bool paused;
   final bool paymentBlocked;
+  final DateTime? scheduledAt;
 
   const Booking({
     required this.id,
@@ -59,6 +60,7 @@ class Booking {
     this.pendingAdditionalChargeReason,
     this.paused = false,
     this.paymentBlocked = false,
+    this.scheduledAt,
   });
 
   factory Booking.fromMap(Map<String, dynamic> map) => Booking(
@@ -89,5 +91,6 @@ class Booking {
         pendingAdditionalChargeReason: map['pendingAdditionalChargeReason'] as String?,
         paused: map['paused'] as bool? ?? false,
         paymentBlocked: map['paymentBlocked'] as bool? ?? false,
+        scheduledAt: map['scheduledAt'] != null ? DateTime.tryParse(map['scheduledAt'] as String) : null,
       );
 }
