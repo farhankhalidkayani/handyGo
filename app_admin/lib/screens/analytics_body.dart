@@ -182,11 +182,31 @@ class _AnalyticsBodyState extends State<AnalyticsBody> {
         const SizedBox(height: 24),
         Text('Worker-shortage areas', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
-        const Text(
-          'Not yet implemented server-side — needs geographic clustering of demand vs. '
-          'online worker coverage (see analyticsRollup.js).',
-          style: TextStyle(color: Colors.grey),
-        ),
+        Builder(builder: (context) {
+          final shortageAreas =
+              Map<String, dynamic>.from(jsonDecode(latest['workerShortageAreas'] as String? ?? '{}'));
+          if (shortageAreas.isEmpty) {
+            return const Text('No shortage areas detected today.');
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: shortageAreas.values.map((raw) {
+              final area = Map<String, dynamic>.from(raw as Map);
+              final lat = (area['lat'] as num).toStringAsFixed(2);
+              final lng = (area['lng'] as num).toStringAsFixed(2);
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber, color: Colors.orange, size: 16),
+                    const SizedBox(width: 6),
+                    Text('~$lat, $lng — ${area['demand']} booking(s), no online workers nearby'),
+                  ],
+                ),
+              );
+            }).toList(),
+          );
+        }),
       ],
     );
   }

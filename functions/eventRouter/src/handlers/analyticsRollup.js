@@ -12,6 +12,59 @@ function startOfToday() {
   return d;
 }
 
+// ~0.05deg is roughly 5.5km at the equator — coarse enough that a handful of bookings/workers
+// land in the same cell, fine enough to distinguish neighborhoods within a city. Pure
+// client-side-computable rules, no geo library or paid API needed.
+const GRID_SIZE = 0.05;
+function gridKey(lat, lng) {
+  return `${Math.round(lat / GRID_SIZE)}:${Math.round(lng / GRID_SIZE)}`;
+}
+function gridCenter(key) {
+  const [gy, gx] = key.split(':').map(Number);
+  return { lat: gy * GRID_SIZE, lng: gx * GRID_SIZE };
+}
+
+// Worker-shortage areas (plan §12/A7): grid cells with real demand today but few/no online
+// workers nearby (same cell or an adjacent one, so a worker just across a cell boundary still
+// counts as coverage).
+async function findShortageAreas(databases, todaysBookings) {
+  const demandCells = {};
+  for (const b of todaysBookings) {
+    if (!b.lat || !b.lng) continue;
+    demandCells[gridKey(b.lat, b.lng)] = (demandCells[gridKey(b.lat, b.lng)] || 0) + 1;
+  }
+  if (!Object.keys(demandCells).length) return {};
+
+  const workersRes = await databases.listDocuments(DB_ID, 'worker_profiles', [
+    Query.equal('availability', 'online'),
+    Query.limit(500),
+  ]);
+  const workerCells = {};
+  for (const w of workersRes.documents) {
+    if (!w.currentLat || !w.currentLng) continue;
+    const key = gridKey(w.currentLat, w.currentLng);
+    workerCells[key] = (workerCells[key] || 0) + 1;
+  }
+
+  const neighborsOf = (key) => {
+    const [gy, gx] = key.split(':').map(Number);
+    const keys = [];
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) keys.push(`${gy + dy}:${gx + dx}`);
+    }
+    return keys;
+  };
+
+  const shortages = {};
+  for (const [key, demand] of Object.entries(demandCells)) {
+    const nearbyWorkers = neighborsOf(key).reduce((sum, k) => sum + (workerCells[k] || 0), 0);
+    if (demand >= 2 && nearbyWorkers === 0) {
+      shortages[key] = { ...gridCenter(key), demand, nearbyWorkers };
+    }
+  }
+  return shortages;
+}
+
 module.exports = async function analyticsRollup({ log }) {
   const databases = getDatabases();
   const today = startOfToday();
@@ -37,6 +90,8 @@ module.exports = async function analyticsRollup({ log }) {
     cancellationReasons[reason] = (cancellationReasons[reason] || 0) + 1;
   }
 
+  const shortageAreas = await findShortageAreas(databases, todaysBookings);
+
   const sys = `You are HandyGo's admin analytics assistant. Given today's raw booking numbers,
 write a 2-3 sentence recommendation card: call out anything that needs attention (a spike in
 cancellations, low completion rate, a category with unusually high demand) and one concrete
@@ -51,6 +106,7 @@ those decisions elsewhere.`;
     avgRating,
     demandByCategory,
     cancellationReasons,
+    shortageAreaCount: Object.keys(shortageAreas).length,
   }));
   const aiNarrative = narrativeOut.tier === 'llm' && narrativeOut.text
     ? narrativeOut.text
@@ -64,7 +120,7 @@ those decisions elsewhere.`;
     revenue,
     avgRating,
     demandByCategory: JSON.stringify(demandByCategory),
-    workerShortageAreas: JSON.stringify({}), // needs geographic clustering — out of scope for the FYP MVP
+    workerShortageAreas: JSON.stringify(shortageAreas),
     cancellationReasons: JSON.stringify(cancellationReasons),
     aiNarrative,
   };

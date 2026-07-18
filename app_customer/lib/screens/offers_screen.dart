@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:handygo_shared/handygo_shared.dart';
 
 import '../services/app_services.dart';
+import 'nearby_workers_screen.dart';
 import 'tracking_screen.dart';
 
 /// Plan §12/§6.2/§9.6: realtime-subscribed offer comparison (InDrive-style). Subscribes to
@@ -49,6 +50,8 @@ class _OffersScreenState extends State<OffersScreen> {
 
   String? _bestMatchOfferId;
   String? _topRatedOfferId;
+  Booking? _booking;
+  String? _categoryName;
 
   Future<void> _load() async {
     final offers = await AppServices.offers.listForBooking(widget.bookingId);
@@ -60,6 +63,44 @@ class _OffersScreenState extends State<OffersScreen> {
       _loading = false;
     });
     _refreshComparison();
+    _loadBookingCategory();
+  }
+
+  Future<void> _loadBookingCategory() async {
+    try {
+      final booking = await AppServices.bookings.getBooking(widget.bookingId);
+      final categories = await AppServices.categories.listAll();
+      ServiceCategory? category;
+      for (final c in categories) {
+        if (c.id == booking.categoryId) {
+          category = c;
+          break;
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _booking = booking;
+        _categoryName = category?.name;
+      });
+    } catch (_) {
+      // "nearby workers" button just won't show — never block the offers screen on this
+    }
+  }
+
+  void _openNearbyWorkers() {
+    final booking = _booking;
+    final categoryName = _categoryName;
+    if (booking == null || categoryName == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => NearbyWorkersScreen(
+          bookingId: booking.id,
+          categoryName: categoryName,
+          lat: booking.lat,
+          lng: booking.lng,
+        ),
+      ),
+    );
   }
 
   Future<void> _refreshComparison() async {
@@ -117,7 +158,17 @@ class _OffersScreenState extends State<OffersScreen> {
         : sentOffers.reduce((a, b) => (a.etaMins ?? 1 << 30) < (b.etaMins ?? 1 << 30) ? a : b);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Compare offers')),
+      appBar: AppBar(
+        title: const Text('Compare offers'),
+        actions: [
+          if (_categoryName != null)
+            IconButton(
+              icon: const Icon(Icons.travel_explore_outlined),
+              tooltip: 'See nearby workers',
+              onPressed: _openNearbyWorkers,
+            ),
+        ],
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Column(

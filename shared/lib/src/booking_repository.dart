@@ -267,6 +267,26 @@ class BookingRepository {
     });
   }
 
+  /// §9.6 C5: ranked nearby verified workers for a category (rules-only geo/skill/rating
+  /// blend, best-match flagged, NOT lowest price — see recommendWorkers.js). Informational —
+  /// the actual job-assignment mechanism stays the offer/bid flow (C6); this just shows the
+  /// customer who's around before/while they wait for offers.
+  Future<Map<String, dynamic>> getNearbyWorkers({
+    String? bookingId,
+    required String categoryName,
+    required double lat,
+    required double lng,
+    double radiusKm = 8,
+  }) {
+    return aiRouter.call('recommendWorkers', {
+      if (bookingId != null) 'bookingId': bookingId,
+      'categoryName': categoryName,
+      'lat': lat,
+      'lng': lng,
+      'radiusKm': radiusKm,
+    });
+  }
+
   Future<Map<String, dynamic>> selectOffer({
     required String bookingId,
     required String offerId,
