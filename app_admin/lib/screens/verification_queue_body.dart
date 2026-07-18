@@ -69,7 +69,9 @@ class _VerificationQueueBodyState extends State<VerificationQueueBody> {
     setState(() => _actionError = null);
     try {
       await AppServices.updateWorkerVerification(workerProfileId: worker.id, status: status, reason: reason);
-      setState(() => _pendingFuture = _loadPending());
+      setState(() {
+        _pendingFuture = _loadPending();
+      });
     } catch (e) {
       setState(() => _actionError = 'Action failed: $e');
     }

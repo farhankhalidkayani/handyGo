@@ -7,6 +7,7 @@ import 'ai_chat_screen.dart';
 import 'ai_intake_screen.dart';
 import 'language_select_screen.dart';
 import 'notifications_screen.dart';
+import 'offers_screen.dart';
 import 'rating_screen.dart';
 import 'safety_center_screen.dart';
 import 'service_request_screen.dart';
@@ -121,6 +122,15 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (_) => RatingScreen(profile: widget.profile, bookingId: booking.id),
         ),
       );
+    } else if (booking.status == BookingStatus.searchingWorkers ||
+        booking.status == BookingStatus.offersReceived) {
+      // No worker selected yet — offers (if any) can only be seen/accepted from OffersScreen,
+      // which is otherwise only reachable via the one-time push right after booking creation.
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => OffersScreen(profile: widget.profile, bookingId: booking.id),
+        ),
+      );
     } else if (booking.status != BookingStatus.completed) {
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -134,14 +144,18 @@ class _HomeScreenState extends State<HomeScreen> {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => AiIntakeScreen(profile: widget.profile)),
     );
-    setState(() => _activeBookingFuture = AppServices.bookings.findActiveForCustomer(widget.profile.id));
+    setState(() {
+      _activeBookingFuture = AppServices.bookings.findActiveForCustomer(widget.profile.id);
+    });
   }
 
   Future<void> _requestServiceManually() async {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => ServiceRequestScreen(profile: widget.profile)),
     );
-    setState(() => _activeBookingFuture = AppServices.bookings.findActiveForCustomer(widget.profile.id));
+    setState(() {
+      _activeBookingFuture = AppServices.bookings.findActiveForCustomer(widget.profile.id);
+    });
   }
 
   void _openAiChat() {

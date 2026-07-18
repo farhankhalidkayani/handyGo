@@ -63,9 +63,11 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _start() async {
     try {
-      _localStream = await navigator.mediaDevices.getUserMedia({'audio': true, 'video': false});
+      _localStream = await navigator.mediaDevices
+          .getUserMedia({'audio': true, 'video': false}).timeout(const Duration(seconds: 15));
     } catch (e) {
-      setState(() => _status = 'Microphone permission denied');
+      if (!mounted) return;
+      setState(() => _status = 'Could not access the microphone — check permissions and try again');
       return;
     }
 
