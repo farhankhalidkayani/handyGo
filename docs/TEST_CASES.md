@@ -447,24 +447,37 @@ an oversight, and not worth building a fake/cosmetic masking layer just to look 
 
 ---
 
+## 2s. Zero-cost closure pass: geo-clustering, C5 UI, scheduling, per-worker chat
+## threads, voice transcription
+
+Everything in §4's previous list that could be closed without a paid service was closed in
+this pass — see §4 below for what's genuinely left (just masked calling now).
+
+| # | Test | App | Steps | Expected | Status |
+|---|---|---|---|---|---|
+| 2s.1 | Worker-shortage areas show real data | Admin | Analytics tab, after a demand cluster with no nearby online workers | Lists the approximate location + booking count instead of the old "not implemented" placeholder | ✅ (scripted — synthetic cluster correctly flagged) |
+| 2s.2 | See nearby workers (C5) | Customer | Offers screen → compass icon | Ranked candidate list (rating/distance/ETA, best match tagged) for this booking's category; no worker names shown | ✅ (scripted — real seeded worker returned, correctly ranked) |
+| 2s.3 | Schedule a booking for later | Customer | AI intake or manual request → "Book now (tap to schedule for later instead)" → pick a date/time | `bookings.scheduledAt` is set; shown on the customer's tracking screen and the worker's active job screen | 🔲 |
+| 2s.4 | Schedule conflict actually triggers | — | A scheduled booking whose OSRM travel time would make the worker very late | `routePlanner`'s `conflicts` array is non-empty and the worker sees a "running behind schedule" warning | ✅ (scripted — confirmed both the pre-existing bug, where index-0 was always skipped, and the fix) |
+| 2s.5 | Ask a question before offering | Worker | Open jobs list → chat-bubble icon on a job → send a message | Opens a private thread with just that worker's messages | 🔲 |
+| 2s.6 | Customer sees per-worker questions | Customer | Offers screen → question-mark icon | Bottom sheet lists every worker who's asked something; tapping one opens only that worker's thread | 🔲 |
+| 2s.7 | Threads stay isolated | — | Two different workers each message the same open booking | Each worker's thread only shows their own messages; the main active-job chat (used once a worker is selected) is unaffected by either | ✅ (scripted — verified with real data) |
+| 2s.8 | Voice dictation | Customer | AI intake screen → mic icon next to the problem field → speak | Recognized speech appears in the text field live, using the browser's Web Speech API (no server round-trip, no cost) | 🔲 |
+| 2s.9 | Dictation failure doesn't block booking | Customer | Use a browser/environment without speech recognition support | A friendly error shows; typing still works normally | ✅ (code review — `_speech.initialize()` failure is handled, not fatal) |
+
+---
+
 ## 4. Known gaps (not yet built — don't file these as bugs)
 
-Voice-note transcription (attachment itself is built — §2l) remains out of scope, per the
-plan's own tiered-AI-cost notes — image classification is now built (§2r.6) using a Groq
-vision model, but speech-to-text would need a separate model/service this project doesn't
-have configured. Worker-shortage-area clustering on the analytics dashboard is stubbed but
-not implemented (§2i.4) — needs geographic clustering of demand vs. online worker coverage.
-`recommendWorkers`'s original C5 mode (ranking nearby workers for a customer, distinct from
-the now-built C6 offer comparison — §2j) is implemented server-side but not yet called from
-any UI, since the current matching model is worker-initiated offers rather than
-customer-browsed rankings. An in-app "ask a question before offering" path was deliberately
-not built: multiple workers messaging the same open booking would land in one unattributed,
-jumbled chat thread (the `messages` schema/UI has no per-candidate-worker channel concept),
-and shipping that half-working seemed worse than leaving the gap. A "book for later"
-scheduling flow doesn't exist, so `routePlanner`'s schedule-conflict warning (§2r.12) is
-wired but never actually triggers today. True telephony-level masked calling (§2r "Masked
-calling") needs a paid third-party service, out of scope for this zero-cost build. Worker
-registration doesn't collect bank/payout details, since withdrawal is simulated instantly
-rather than via a real payout rail (see `withdrawWallet.js`). Cloud LLM (Groq) is configured
-and confirmed live (§2b) — §0.6's fallback-ladder behavior still applies if Groq itself is
-ever unreachable/rate-limited, just isn't the current normal path anymore.
+**True telephony-level masked calling** is the only remaining gap that isn't just an
+engineering-effort question — it needs a paid third-party service (Twilio/Vonage/etc. to
+proxy real phone calls), which contradicts this project's zero-cost design used everywhere
+else (Groq over a paid LLM, COD over a real payment gateway, browser Web Speech over a paid
+STT API). The plan's literal requirement — the customer's number is never shown to a worker
+before offer acceptance — is already satisfied without it (verified in §2r).
+
+Everything else previously listed here (worker-shortage clustering, C5 UI, "book for later"
+scheduling, per-worker pre-offer chat threads, voice transcription) is now built — see §2s.
+Cloud LLM (Groq) is configured and confirmed live (§2b) — §0.6's fallback-ladder behavior
+still applies if Groq itself is ever unreachable/rate-limited, just isn't the current normal
+path anymore.
