@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:handygo_shared/handygo_shared.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:record/record.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../services/app_services.dart';
 import 'offers_screen.dart';
@@ -42,6 +43,32 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
   final List<int> _voiceNoteBuffer = [];
   StreamSubscription<List<int>>? _voiceNoteSub;
   DateTime? _scheduledAt;
+  final _speech = stt.SpeechToText();
+  bool _listening = false;
+
+  /// Zero-cost speech-to-text (plan's own "Vosk (offline)/device STT" choice — this uses the
+  /// browser's built-in Web Speech API on Flutter web via the speech_to_text package, so
+  /// there's no model to host and no per-call cost, unlike a cloud STT API). Dictates straight
+  /// into the problem text field, separate from "Record a voice note" below (which stays an
+  /// attachment-only raw audio upload).
+  Future<void> _toggleDictation() async {
+    if (_listening) {
+      await _speech.stop();
+      if (mounted) setState(() => _listening = false);
+      return;
+    }
+    final available = await _speech.initialize(
+      onError: (e) => setState(() => _error = 'Speech recognition error: ${e.errorMsg}'),
+    );
+    if (!available) {
+      setState(() => _error = 'Speech recognition is not available on this device/browser');
+      return;
+    }
+    setState(() => _listening = true);
+    await _speech.listen(
+      onResult: (result) => setState(() => _problemController.text = result.recognizedWords),
+    );
+  }
 
   Future<void> _pickSchedule() async {
     final date = await showDatePicker(
@@ -200,6 +227,7 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
     _addressController.dispose();
     _voiceNoteSub?.cancel();
     _recorder.dispose();
+    _speech.stop();
     super.dispose();
   }
 
@@ -216,7 +244,17 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
             const SizedBox(height: 12),
             TextField(
               controller: _problemController,
-              decoration: const InputDecoration(labelText: 'e.g. "AC se pani tapak raha hai"'),
+              decoration: InputDecoration(
+                labelText: 'e.g. "AC se pani tapak raha hai"',
+                suffixIcon: estimate == null
+                    ? IconButton(
+                        icon: Icon(_listening ? Icons.mic : Icons.mic_none,
+                            color: _listening ? Colors.red : null),
+                        tooltip: _listening ? 'Stop dictation' : 'Speak instead of typing',
+                        onPressed: _toggleDictation,
+                      )
+                    : null,
+              ),
               maxLines: 3,
               enabled: estimate == null,
             ),
