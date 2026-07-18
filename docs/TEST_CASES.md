@@ -467,17 +467,42 @@ this pass — see §4 below for what's genuinely left (just masked calling now).
 
 ---
 
+## 2t. In-app WebRTC voice calling (zero-cost alternative to masked calling)
+
+Real telephony-level masked calling needs a paid proxy (Twilio/etc.); this is the zero-cost
+alternative — actual in-app voice calls over WebRTC, peer-to-peer, no per-minute cost. The
+existing `tel:` link stays as a fallback on both screens.
+
+Two real issues were found and fixed while building this (both verified live with real
+customer/worker sessions, not just code review):
+1. `calls.answerSdp` (originally 8000 chars) couldn't be created — hit Appwrite's per-
+   collection attribute-size cap stacked on top of `offerSdp`. Reduced to 3000 chars.
+2. `calls` only granted `create`/`read("users")` — the callee got a 401 trying to answer,
+   since Appwrite only grants the document *creator* implicit update rights. Added
+   `update("users")` at the collection level.
+
+| # | Test | App | Steps | Expected | Status |
+|---|---|---|---|---|---|
+| 2t.1 | Signaling handshake completes | — | Real customer session creates a call, real worker session answers it | Worker's update succeeds (previously 401); `calls.status` → `accepted` with a real `answerSdp` | ✅ (scripted, real sessions) |
+| 2t.2 | ICE candidates reach both sides | — | Both parties create `call_candidates` docs for the same call | Each side's candidates are visible to the other | ✅ (scripted, real sessions) |
+| 2t.3 | Outgoing call | Customer/Worker | Tracking/Active Job screen → phone-in-talk icon | Call screen opens, mic permission requested, status shows "Ringing..." then "Connected" once answered | 🔲 |
+| 2t.4 | Incoming call | Customer/Worker | While the tracking/active job screen is open, the other party calls | An "Incoming call" dialog appears with Accept/Decline; Accept opens the call screen and connects | 🔲 |
+| 2t.5 | Decline | Customer/Worker | Incoming call dialog → Decline | Caller's screen shows the call ended; no call screen opens for the decliner | 🔲 |
+| 2t.6 | Mute | Either party, mid-call | Tap the mic icon on the call screen | Local audio track disables; icon toggles to indicate muted | 🔲 |
+| 2t.7 | Hang up cleans up | Either party, mid-call | Tap the red hang-up button | Peer connection closes, `calls.status` → `ended`, both call screens close | 🔲 |
+| 2t.8 | Restrictive-network failure is visible, not silent | — | Simulate/encounter a NAT that STUN alone can't traverse (no TURN server configured) | Status shows "Connection failed — the other side may be on a restrictive network" rather than hanging silently | 🔲 |
+| 2t.9 | Both apps must be open — no PSTN fallback | — | Call while the other party's app/tab is closed | No incoming-call dialog ever appears for them (there's no push-wake mechanism) — documented limitation, not a bug | ✅ (code review) |
+
+---
+
 ## 4. Known gaps (not yet built — don't file these as bugs)
 
-**True telephony-level masked calling** is the only remaining gap that isn't just an
-engineering-effort question — it needs a paid third-party service (Twilio/Vonage/etc. to
-proxy real phone calls), which contradicts this project's zero-cost design used everywhere
-else (Groq over a paid LLM, COD over a real payment gateway, browser Web Speech over a paid
-STT API). The plan's literal requirement — the customer's number is never shown to a worker
-before offer acceptance — is already satisfied without it (verified in §2r).
-
-Everything else previously listed here (worker-shortage clustering, C5 UI, "book for later"
-scheduling, per-worker pre-offer chat threads, voice transcription) is now built — see §2s.
-Cloud LLM (Groq) is configured and confirmed live (§2b) — §0.6's fallback-ladder behavior
-still applies if Groq itself is ever unreachable/rate-limited, just isn't the current normal
-path anymore.
+None that are purely engineering-effort at this point. In-app WebRTC calling (§2t) closes
+the gap left by not building real telephony-level masked calling (which needs a paid proxy
+service like Twilio, contradicting this project's zero-cost design) — the plan's literal
+requirement, that a worker never sees the customer's number before offer acceptance, was
+already satisfied without either. WebRTC calling's own limitations (no TURN relay, so some
+restrictive networks can't connect; both apps must be open, no PSTN-style background ringing)
+are documented in §2t rather than silently glossed over. Cloud LLM (Groq) is configured and
+confirmed live (§2b) — §0.6's fallback-ladder behavior still applies if Groq itself is ever
+unreachable/rate-limited, just isn't the current normal path anymore.
