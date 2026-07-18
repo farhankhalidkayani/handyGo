@@ -43,6 +43,7 @@ dependencies:
   geolocator: ^14.0.2
   url_launcher: ^6.3.2
   image_picker: ^1.2.3
+  flutter_webrtc: ^1.5.2
 
 dev_dependencies:
   flutter_test:

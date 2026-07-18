@@ -17,4 +17,5 @@ class AppServices {
   static final MediaRepository media = MediaRepository(client);
   static final NotificationRepository notifications = NotificationRepository(client);
   static final TransactionRepository transactions = TransactionRepository(client);
+  static final CallRepository calls = CallRepository(client);
 }

@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../services/app_services.dart';
 import '../widgets/sos_button.dart';
+import 'call_screen.dart';
 import 'chat_screen.dart';
 import 'report_fraud_screen.dart';
 
@@ -51,6 +52,9 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
   Timer? _timerTick;
   Duration _elapsed = Duration.zero;
 
+  RealtimeSubscription? _callSubscription;
+  final Set<String> _handledCallIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -65,6 +69,68 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
         _startServiceTimer(booking);
       }
     });
+    _listenForIncomingCalls();
+  }
+
+  /// In-app WebRTC calling (call_screen.dart) — listens while this screen is open so an
+  /// incoming call from the customer surfaces as a dialog rather than being missed.
+  void _listenForIncomingCalls() {
+    _callSubscription = AppServices.calls.subscribeToCalls();
+    _callSubscription!.stream.listen((event) {
+      final payload = event.payload;
+      if (payload['calleeId'] != widget.profile.id) return;
+      if (payload['status'] != 'ringing') return;
+      final callId = payload['\$id'] as String;
+      if (_handledCallIds.contains(callId)) return;
+      _handledCallIds.add(callId);
+      _showIncomingCallDialog(Call.fromMap(payload));
+    });
+  }
+
+  Future<void> _showIncomingCallDialog(Call call) async {
+    final accept = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Incoming call'),
+        content: const Text('The customer is calling you.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Decline')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Accept')),
+        ],
+      ),
+    );
+    if (accept != true) {
+      AppServices.calls.updateStatus(callId: call.id, status: 'declined').catchError((_) {});
+      return;
+    }
+    if (!mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CallScreen(
+          bookingId: widget.bookingId,
+          myUserId: widget.profile.id,
+          myRole: 'worker',
+          peerUserId: call.callerId,
+          incomingCall: call,
+        ),
+      ),
+    );
+  }
+
+  void _startCall() {
+    final customerId = _booking?.customerId;
+    if (customerId == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CallScreen(
+          bookingId: widget.bookingId,
+          myUserId: widget.profile.id,
+          myRole: 'worker',
+          peerUserId: customerId,
+        ),
+      ),
+    );
   }
 
   Future<void> _load() async {
@@ -380,6 +446,7 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
   @override
   void dispose() {
     _subscription?.close();
+    _callSubscription?.close();
     _otpController.dispose();
     _timerTick?.cancel();
     super.dispose();
@@ -407,8 +474,13 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
         title: const Text('Active job'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.phone_in_talk_outlined),
+            tooltip: 'Call via app (free)',
+            onPressed: _startCall,
+          ),
+          IconButton(
             icon: const Icon(Icons.call_outlined),
-            tooltip: 'Call customer',
+            tooltip: 'Call customer (phone)',
             onPressed: _callCustomer,
           ),
           IconButton(

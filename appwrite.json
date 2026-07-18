@@ -1116,6 +1116,119 @@
             ]
         },
         {
+            "$id": "calls",
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")"
+            ],
+            "databaseId": "handygo",
+            "name": "calls",
+            "enabled": true,
+            "documentSecurity": true,
+            "attributes": [
+                {
+                    "key": "bookingId",
+                    "type": "string",
+                    "size": 64,
+                    "required": true
+                },
+                {
+                    "key": "callerId",
+                    "type": "string",
+                    "size": 64,
+                    "required": true
+                },
+                {
+                    "key": "calleeId",
+                    "type": "string",
+                    "size": 64,
+                    "required": true
+                },
+                {
+                    "key": "callerRole",
+                    "type": "string",
+                    "size": 16,
+                    "required": true
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "size": 16,
+                    "required": false,
+                    "default": "ringing"
+                },
+                {
+                    "key": "offerSdp",
+                    "type": "string",
+                    "size": 8000,
+                    "required": false
+                },
+                {
+                    "key": "answerSdp",
+                    "type": "string",
+                    "size": 3000,
+                    "required": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_calleeId",
+                    "type": "key",
+                    "attributes": [
+                        "calleeId"
+                    ]
+                },
+                {
+                    "key": "idx_bookingId",
+                    "type": "key",
+                    "attributes": [
+                        "bookingId"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "call_candidates",
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"users\")"
+            ],
+            "databaseId": "handygo",
+            "name": "call_candidates",
+            "enabled": true,
+            "documentSecurity": true,
+            "attributes": [
+                {
+                    "key": "callId",
+                    "type": "string",
+                    "size": 64,
+                    "required": true
+                },
+                {
+                    "key": "senderId",
+                    "type": "string",
+                    "size": 64,
+                    "required": true
+                },
+                {
+                    "key": "candidate",
+                    "type": "string",
+                    "size": 2000,
+                    "required": true
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_callId",
+                    "type": "key",
+                    "attributes": [
+                        "callId"
+                    ]
+                }
+            ]
+        },
+        {
             "$id": "sos_alerts",
             "$permissions": [
                 "create(\"users\")",

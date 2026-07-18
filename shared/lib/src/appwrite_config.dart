@@ -36,6 +36,8 @@ class Collections {
   static const fraudReports = 'fraud_reports';
   static const aiLogs = 'ai_logs';
   static const analyticsDaily = 'analytics_daily';
+  static const calls = 'calls';
+  static const callCandidates = 'call_candidates';
 }
 
 /// Storage bucket ids — must match appwrite.json exactly.
