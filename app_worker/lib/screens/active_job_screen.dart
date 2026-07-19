@@ -586,234 +586,23 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  scheme.primary,
-                  scheme.primary.withValues(alpha: 0.75),
-                ],
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: scheme.onPrimary.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        _statusIcons[booking.status] ?? Icons.info_outline,
-                        color: scheme.onPrimary,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      _statusLabels[booking.status] ?? booking.status.wire,
-                      style: TextStyle(
-                        color: scheme.onPrimary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  booking.problemText,
-                  style: TextStyle(
-                    color: scheme.onPrimary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.location_on_outlined,
-                      size: 14,
-                      color: scheme.onPrimary.withValues(alpha: 0.85),
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        booking.addressText,
-                        style: TextStyle(
-                          color: scheme.onPrimary.withValues(alpha: 0.85),
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (booking.finalQuote != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Quote: Rs. ${booking.finalQuote!.toStringAsFixed(0)}',
-                    style: TextStyle(
-                      color: scheme.onPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-                if (booking.scheduledAt != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Scheduled for: ${booking.scheduledAt!.toLocal()}'
-                        .split('.')
-                        .first,
-                    style: TextStyle(
-                      color: scheme.onPrimary.withValues(alpha: 0.85),
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ).animate().fadeIn(duration: 300.ms),
-          if (booking.paused) ...[
-            const SizedBox(height: 16),
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.pause_circle_outline, color: Colors.red),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Text(
-                      'This booking has been paused by an admin.',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          if ([
-            BookingStatus.confirmed,
-            BookingStatus.workerOnTheWay,
-          ].contains(booking.status)) ...[
-            const SizedBox(height: 16),
-            if (_workerPos != null)
-              SizedBox(
-                height: 180,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: FlutterMap(
-                    options: MapOptions(
-                      initialCenter: _workerPos!,
-                      initialZoom: 13,
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.handygo.worker',
-                      ),
-                      MarkerLayer(
-                        markers: [
-                          Marker(
-                            point: _workerPos!,
-                            child: const Icon(
-                              Icons.my_location,
-                              color: Colors.blue,
-                            ),
-                          ),
-                          Marker(
-                            point: latlong.LatLng(booking.lat, booking.lng),
-                            child: const Icon(
-                              Icons.location_on,
-                              color: Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                if (_loadingRoute)
-                  const SizedBox(
-                    height: 16,
-                    width: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                else if (_etaMins != null)
-                  Text(
-                    'ETA: ~$_etaMins mins${_etaSource == 'straight-line-fallback' ? ' (estimated)' : ''}',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  )
-                else
-                  Text(
-                    'ETA unavailable',
-                    style: TextStyle(color: scheme.onSurfaceVariant),
-                  ),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: _loadingRoute
-                      ? null
-                      : () => _refreshRoute(booking),
-                  icon: const Icon(Icons.refresh, size: 18),
-                  label: const Text('Refresh'),
-                ),
-              ],
-            ),
-            if (_scheduleConflictMins != null) ...[
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.warning_amber,
-                    color: Colors.orange,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Running ~$_scheduleConflictMins mins behind schedule',
-                    style: TextStyle(color: Colors.orange.shade800),
-                  ),
-                ],
-              ),
-            ],
-          ],
-          const SizedBox(height: 20),
-          if (_error != null) ...[
-            Text(_error!, style: TextStyle(color: scheme.error)),
-            const SizedBox(height: 16),
-          ],
-          if (awaitingOtp) ...[
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: scheme.primary.withValues(alpha: 0.25),
-                  width: 1.5,
+                borderRadius: BorderRadius.circular(22),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    scheme.primary,
+                    scheme.primary.withValues(alpha: 0.75),
+                  ],
                 ),
               ),
               child: Column(
@@ -821,170 +610,384 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(
-                        Icons.pin_outlined,
-                        size: 18,
-                        color: scheme.onSurfaceVariant,
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: scheme.onPrimary.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _statusIcons[booking.status] ?? Icons.info_outline,
+                          color: scheme.onPrimary,
+                        ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 12),
+                      Text(
+                        _statusLabels[booking.status] ?? booking.status.wire,
+                        style: TextStyle(
+                          color: scheme.onPrimary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    booking.problemText,
+                    style: TextStyle(
+                      color: scheme.onPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on_outlined,
+                        size: 14,
+                        color: scheme.onPrimary.withValues(alpha: 0.85),
+                      ),
+                      const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          'Ask the customer for their 4-digit code to start the service.',
+                          booking.addressText,
                           style: TextStyle(
-                            color: scheme.onSurfaceVariant,
+                            color: scheme.onPrimary.withValues(alpha: 0.85),
                             fontSize: 13,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _otpController,
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      letterSpacing: 4,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    decoration: const InputDecoration(
-                      labelText: 'Customer OTP',
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: _busy ? null : _submitOtp,
-                    icon: _busy
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(Icons.play_circle_outline),
-                    label: const Text('Start service'),
-                  ),
-                ],
-              ),
-            ),
-          ] else if (next != null)
-            FilledButton.icon(
-              onPressed: _busy
-                  ? null
-                  : () => next.$1 == BookingStatus.completionRequested
-                        ? _markJobDone()
-                        : _advance(next.$1),
-              icon: _busy
-                  ? const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(Icons.arrow_forward),
-              label: Text(next.$2),
-            )
-          else
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.hourglass_top_outlined,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Waiting for the customer to confirm & pay.',
-                    style: TextStyle(color: scheme.onSurfaceVariant),
-                  ),
-                ],
-              ),
-            ),
-          if (booking.status == BookingStatus.inProgress) ...[
-            const SizedBox(height: 20),
-            if (_serviceStartedAt != null)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                decoration: BoxDecoration(
-                  color: scheme.secondaryContainer,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Column(
-                  children: [
+                  if (booking.finalQuote != null) ...[
+                    const SizedBox(height: 8),
                     Text(
-                      'SERVICE TIME',
+                      'Quote: Rs. ${booking.finalQuote!.toStringAsFixed(0)}',
                       style: TextStyle(
-                        color: scheme.onSecondaryContainer.withValues(
-                          alpha: 0.8,
-                        ),
-                        fontSize: 11,
+                        color: scheme.onPrimary,
                         fontWeight: FontWeight.w700,
-                        letterSpacing: 1,
                       ),
                     ),
+                  ],
+                  if (booking.scheduledAt != null) ...[
                     const SizedBox(height: 4),
                     Text(
-                      _formatElapsed(_elapsed),
+                      'Scheduled for: ${booking.scheduledAt!.toLocal()}'
+                          .split('.')
+                          .first,
                       style: TextStyle(
-                        color: scheme.onSecondaryContainer,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 28,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+                        color: scheme.onPrimary.withValues(alpha: 0.85),
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ).animate().fadeIn(duration: 300.ms),
+            if (booking.paused) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.pause_circle_outline, color: Colors.red),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text(
+                        'This booking has been paused by an admin.',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-            const SizedBox(height: 12),
-            if ((booking.pendingAdditionalCharge ?? 0) > 0)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: scheme.tertiaryContainer,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  'Waiting for customer to approve Rs. ${booking.pendingAdditionalCharge!.toStringAsFixed(0)} '
-                  '(${booking.pendingAdditionalChargeReason ?? ''})',
-                  style: TextStyle(
-                    color: scheme.onTertiaryContainer,
-                    fontStyle: FontStyle.italic,
+            ],
+            if ([
+              BookingStatus.confirmed,
+              BookingStatus.workerOnTheWay,
+            ].contains(booking.status)) ...[
+              const SizedBox(height: 16),
+              if (_workerPos != null)
+                SizedBox(
+                  height: 180,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: FlutterMap(
+                      options: MapOptions(
+                        initialCenter: _workerPos!,
+                        initialZoom: 13,
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.handygo.worker',
+                        ),
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: _workerPos!,
+                              child: const Icon(
+                                Icons.my_location,
+                                color: Colors.blue,
+                              ),
+                            ),
+                            Marker(
+                              point: latlong.LatLng(booking.lat, booking.lng),
+                              child: const Icon(
+                                Icons.location_on,
+                                color: Colors.red,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  if (_loadingRoute)
+                    const SizedBox(
+                      height: 16,
+                      width: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else if (_etaMins != null)
+                    Text(
+                      'ETA: ~$_etaMins mins${_etaSource == 'straight-line-fallback' ? ' (estimated)' : ''}',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    )
+                  else
+                    Text(
+                      'ETA unavailable',
+                      style: TextStyle(color: scheme.onSurfaceVariant),
+                    ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: _loadingRoute
+                        ? null
+                        : () => _refreshRoute(booking),
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('Refresh'),
+                  ),
+                ],
+              ),
+              if (_scheduleConflictMins != null) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.warning_amber,
+                      color: Colors.orange,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Running ~$_scheduleConflictMins mins behind schedule',
+                      style: TextStyle(color: Colors.orange.shade800),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+            const SizedBox(height: 20),
+            if (_error != null) ...[
+              Text(_error!, style: TextStyle(color: scheme.error)),
+              const SizedBox(height: 16),
+            ],
+            if (awaitingOtp) ...[
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: scheme.primary.withValues(alpha: 0.25),
+                    width: 1.5,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.pin_outlined,
+                          size: 18,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Ask the customer for their 4-digit code to start the service.',
+                            style: TextStyle(
+                              color: scheme.onSurfaceVariant,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _otpController,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        letterSpacing: 4,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Customer OTP',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: _busy ? null : _submitOtp,
+                      icon: _busy
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.play_circle_outline),
+                      label: const Text('Start service'),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (next != null)
+              FilledButton.icon(
+                onPressed: _busy
+                    ? null
+                    : () => next.$1 == BookingStatus.completionRequested
+                          ? _markJobDone()
+                          : _advance(next.$1),
+                icon: _busy
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.arrow_forward),
+                label: Text(next.$2),
               )
             else
-              OutlinedButton.icon(
-                onPressed: _busy ? null : _requestAdditionalCharge,
-                icon: const Icon(Icons.add_card_outlined),
-                label: const Text('Request additional charge'),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.hourglass_top_outlined,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Waiting for the customer to confirm & pay.',
+                      style: TextStyle(color: scheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
               ),
-          ],
-          if (![
-            BookingStatus.serviceStarted,
-            BookingStatus.inProgress,
-            BookingStatus.completionRequested,
-          ].contains(booking.status)) ...[
-            const SizedBox(height: 16),
-            Center(
-              child: TextButton(
-                onPressed: _busy ? null : _cancelBooking,
-                child: const Text('Cancel booking'),
+            if (booking.status == BookingStatus.inProgress) ...[
+              const SizedBox(height: 20),
+              if (_serviceStartedAt != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    color: scheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'SERVICE TIME',
+                        style: TextStyle(
+                          color: scheme.onSecondaryContainer.withValues(
+                            alpha: 0.8,
+                          ),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _formatElapsed(_elapsed),
+                        style: TextStyle(
+                          color: scheme.onSecondaryContainer,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 28,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 12),
+              if ((booking.pendingAdditionalCharge ?? 0) > 0)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: scheme.tertiaryContainer,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    'Waiting for customer to approve Rs. ${booking.pendingAdditionalCharge!.toStringAsFixed(0)} '
+                    '(${booking.pendingAdditionalChargeReason ?? ''})',
+                    style: TextStyle(
+                      color: scheme.onTertiaryContainer,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                )
+              else
+                OutlinedButton.icon(
+                  onPressed: _busy ? null : _requestAdditionalCharge,
+                  icon: const Icon(Icons.add_card_outlined),
+                  label: const Text('Request additional charge'),
+                ),
+            ],
+            if (![
+              BookingStatus.serviceStarted,
+              BookingStatus.inProgress,
+              BookingStatus.completionRequested,
+            ].contains(booking.status)) ...[
+              const SizedBox(height: 16),
+              Center(
+                child: TextButton(
+                  onPressed: _busy ? null : _cancelBooking,
+                  child: const Text('Cancel booking'),
+                ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
       floatingActionButton: SosButton(
         raisedByRole: 'worker',

@@ -9,16 +9,21 @@ const { parseBody } = require('./lib/parseBody');
 const scoreEngine = require('./handlers/scoreEngine');
 const analyticsRollup = require('./handlers/analyticsRollup');
 
-// bookings has no own handler module — any create/update just triggers a full analytics
-// recompute (cheap: one bookings list + one worker_profiles list, see analyticsRollup.js),
-// so the admin panel's Analytics tab stays live instead of only updating at the daily
-// scheduled rollup. Ignores the individual booking payload; recomputes the whole day.
+// bookings has no own handler module — any create/update triggers both a full analytics
+// recompute (admin Analytics tab, see analyticsRollup.js) and a full score recompute (worker
+// performanceScore / customer riskScore, see scoreEngine.js — cheap at this dataset size,
+// well within the function timeout), so both the Analytics tab and the AI Insights tab's
+// worker-performance flags stay live instead of only updating at the daily scheduled run.
+// Ignores the individual booking payload; both recompute from scratch.
 const eventHandlers = {
   messages: require('./handlers/translate'),
   worker_offers: require('./handlers/priceGuard'),
   sos_alerts: require('./handlers/sos'),
   fraud_reports: require('./handlers/fraud'),
-  bookings: async (doc, ctx) => analyticsRollup(ctx),
+  bookings: async (doc, ctx) => {
+    const [scores, analytics] = await Promise.all([scoreEngine(ctx), analyticsRollup(ctx)]);
+    return { scores, analytics };
+  },
 };
 
 function collectionFromEventHeader(headerValue) {

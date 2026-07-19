@@ -374,127 +374,218 @@ class _TrackingScreenState extends State<TrackingScreen> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  scheme.primary,
-                  scheme.primary.withValues(alpha: 0.75),
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    scheme.primary,
+                    scheme.primary.withValues(alpha: 0.75),
+                  ],
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: scheme.onPrimary.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      _statusIcons[booking.status] ?? Icons.info_outline,
+                      color: scheme.onPrimary,
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      _statusLabels[booking.status] ?? booking.status.wire,
+                      style: TextStyle(
+                        color: scheme.onPrimary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
                 ],
               ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: scheme.onPrimary.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    _statusIcons[booking.status] ?? Icons.info_outline,
-                    color: scheme.onPrimary,
-                    size: 26,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Text(
-                    _statusLabels[booking.status] ?? booking.status.wire,
-                    style: TextStyle(
-                      color: scheme.onPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 18,
+            ).animate().fadeIn(duration: 300.ms),
+            if (booking.otp != null) ...[
+              const SizedBox(height: 16),
+              DottedOtpCard(otp: booking.otp!),
+            ],
+            if (booking.scheduledAt != null || booking.finalQuote != null) ...[
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (booking.scheduledAt != null)
+                    _InfoChip(
+                      icon: Icons.event_outlined,
+                      label: 'Scheduled for: ${booking.scheduledAt!.toLocal()}'
+                          .split('.')
+                          .first,
                     ),
+                  if (booking.finalQuote != null)
+                    _InfoChip(
+                      icon: Icons.payments_outlined,
+                      label:
+                          'Quote: Rs. ${booking.finalQuote!.toStringAsFixed(0)}',
+                    ),
+                ],
+              ),
+            ],
+            if (booking.paused) ...[
+              const SizedBox(height: 16),
+              _WarningBanner(
+                color: Colors.red,
+                icon: Icons.pause_circle_outline,
+                text:
+                    'This booking has been paused by an admin. Please contact support.',
+              ),
+            ],
+            if (booking.paymentBlocked) ...[
+              const SizedBox(height: 16),
+              _WarningBanner(
+                color: Colors.orange,
+                icon: Icons.block_outlined,
+                text:
+                    'Payment for this booking is on hold pending an admin review.',
+              ),
+            ],
+            if (_trackedStatuses.contains(booking.status) &&
+                _workerPos != null) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 180,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: FlutterMap(
+                    options: MapOptions(
+                      initialCenter: _workerPos!,
+                      initialZoom: 13,
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.handygo.customer',
+                      ),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: _workerPos!,
+                            child: const Icon(
+                              Icons.my_location,
+                              color: Colors.blue,
+                            ),
+                          ),
+                          Marker(
+                            point: latlong.LatLng(booking.lat, booking.lng),
+                            child: const Icon(
+                              Icons.location_on,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ).animate().fadeIn(duration: 300.ms),
-          if (booking.otp != null) ...[
-            const SizedBox(height: 16),
-            DottedOtpCard(otp: booking.otp!),
-          ],
-          if (booking.scheduledAt != null || booking.finalQuote != null) ...[
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if (booking.scheduledAt != null)
-                  _InfoChip(
-                    icon: Icons.event_outlined,
-                    label: 'Scheduled for: ${booking.scheduledAt!.toLocal()}'
-                        .split('.')
-                        .first,
-                  ),
-                if (booking.finalQuote != null)
-                  _InfoChip(
-                    icon: Icons.payments_outlined,
-                    label:
-                        'Quote: Rs. ${booking.finalQuote!.toStringAsFixed(0)}',
-                  ),
-              ],
-            ),
-          ],
-          if (booking.paused) ...[
-            const SizedBox(height: 16),
-            _WarningBanner(
-              color: Colors.red,
-              icon: Icons.pause_circle_outline,
-              text:
-                  'This booking has been paused by an admin. Please contact support.',
-            ),
-          ],
-          if (booking.paymentBlocked) ...[
-            const SizedBox(height: 16),
-            _WarningBanner(
-              color: Colors.orange,
-              icon: Icons.block_outlined,
-              text:
-                  'Payment for this booking is on hold pending an admin review.',
-            ),
-          ],
-          if (_trackedStatuses.contains(booking.status) &&
-              _workerPos != null) ...[
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 180,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: FlutterMap(
-                  options: MapOptions(
-                    initialCenter: _workerPos!,
-                    initialZoom: 13,
-                  ),
+              ),
+            ],
+            if (_error != null) ...[
+              const SizedBox(height: 16),
+              Text(_error!, style: TextStyle(color: scheme.error)),
+            ],
+            if (booking.status == BookingStatus.completionRequested) ...[
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: _busy ? null : _confirmAndPay,
+                icon: _busy
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.check_circle_outline),
+                label: const Text('Confirm & pay (COD)'),
+              ),
+            ],
+            if ((booking.pendingAdditionalCharge ?? 0) > 0) ...[
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: scheme.tertiaryContainer,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.handygo.customer',
-                    ),
-                    MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: _workerPos!,
-                          child: const Icon(
-                            Icons.my_location,
-                            color: Colors.blue,
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.build_circle_outlined,
+                          color: scheme.onTertiaryContainer,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Worker requests Rs. ${booking.pendingAdditionalCharge!.toStringAsFixed(0)} for materials',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: scheme.onTertiaryContainer,
+                            ),
                           ),
                         ),
-                        Marker(
-                          point: latlong.LatLng(booking.lat, booking.lng),
-                          child: const Icon(
-                            Icons.location_on,
-                            color: Colors.red,
+                      ],
+                    ),
+                    if ((booking.pendingAdditionalChargeReason ?? '')
+                        .isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        booking.pendingAdditionalChargeReason!,
+                        style: TextStyle(
+                          color: scheme.onTertiaryContainer.withValues(
+                            alpha: 0.85,
+                          ),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: _busy
+                                ? null
+                                : () => _respondToCharge(true),
+                            child: const Text('Approve'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _busy
+                                ? null
+                                : () => _respondToCharge(false),
+                            child: const Text('Decline'),
                           ),
                         ),
                       ],
@@ -502,110 +593,22 @@ class _TrackingScreenState extends State<TrackingScreen> {
                   ],
                 ),
               ),
-            ),
-          ],
-          if (_error != null) ...[
-            const SizedBox(height: 16),
-            Text(_error!, style: TextStyle(color: scheme.error)),
-          ],
-          if (booking.status == BookingStatus.completionRequested) ...[
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: _busy ? null : _confirmAndPay,
-              icon: _busy
-                  ? const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(Icons.check_circle_outline),
-              label: const Text('Confirm & pay (COD)'),
-            ),
-          ],
-          if ((booking.pendingAdditionalCharge ?? 0) > 0) ...[
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: scheme.tertiaryContainer,
-                borderRadius: BorderRadius.circular(18),
+            ],
+            if (![
+              BookingStatus.serviceStarted,
+              BookingStatus.inProgress,
+              BookingStatus.completionRequested,
+            ].contains(booking.status)) ...[
+              const SizedBox(height: 16),
+              Center(
+                child: TextButton(
+                  onPressed: _busy ? null : _cancelBooking,
+                  child: const Text('Cancel booking'),
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.build_circle_outlined,
-                        color: scheme.onTertiaryContainer,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Worker requests Rs. ${booking.pendingAdditionalCharge!.toStringAsFixed(0)} for materials',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onTertiaryContainer,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if ((booking.pendingAdditionalChargeReason ?? '')
-                      .isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      booking.pendingAdditionalChargeReason!,
-                      style: TextStyle(
-                        color: scheme.onTertiaryContainer.withValues(
-                          alpha: 0.85,
-                        ),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: _busy
-                              ? null
-                              : () => _respondToCharge(true),
-                          child: const Text('Approve'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _busy
-                              ? null
-                              : () => _respondToCharge(false),
-                          child: const Text('Decline'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            ],
           ],
-          if (![
-            BookingStatus.serviceStarted,
-            BookingStatus.inProgress,
-            BookingStatus.completionRequested,
-          ].contains(booking.status)) ...[
-            const SizedBox(height: 16),
-            Center(
-              child: TextButton(
-                onPressed: _busy ? null : _cancelBooking,
-                child: const Text('Cancel booking'),
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
       floatingActionButton: SosButton(
         raisedByRole: 'customer',

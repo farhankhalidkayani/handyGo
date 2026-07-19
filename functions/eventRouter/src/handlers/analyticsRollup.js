@@ -84,6 +84,15 @@ module.exports = async function analyticsRollup({ log }) {
     demandByCategory[b.categoryId] = (demandByCategory[b.categoryId] || 0) + 1;
   }
 
+  // Admin UI already maps categoryId -> name itself for the chart (analytics_body.dart), but
+  // the AI narrative text below quotes this object directly — without translating ids to
+  // names here too, the LLM writes sentences like "category 6a58f9..." instead of "Plumbing".
+  const categoriesRes = await databases.listDocuments(DB_ID, 'service_categories', [Query.limit(100)]);
+  const categoryNames = Object.fromEntries(categoriesRes.documents.map((c) => [c.$id, c.name]));
+  const demandByCategoryName = Object.fromEntries(
+    Object.entries(demandByCategory).map(([id, count]) => [categoryNames[id] || id, count])
+  );
+
   const cancellationReasons = {};
   for (const b of cancelled) {
     const reason = b.reviewText || 'unspecified';
@@ -95,16 +104,16 @@ module.exports = async function analyticsRollup({ log }) {
   const sys = `You are HandyGo's admin analytics assistant. Given today's raw booking numbers,
 write a 2-3 sentence recommendation card: call out anything that needs attention (a spike in
 cancellations, low completion rate, a category with unusually high demand) and one concrete
-suggestion. Be specific with the numbers given. If nothing stands out, just say things look
-normal. Never mention refunds, bans, or suspensions — this is informational only, admins make
-those decisions elsewhere.`;
+suggestion. Be specific with the numbers given — always refer to categories by their name, never
+by an id. If nothing stands out, just say things look normal. Never mention refunds, bans, or
+suspensions — this is informational only, admins make those decisions elsewhere.`;
   const narrativeOut = await askLLM(sys, JSON.stringify({
     totalBookings: todaysBookings.length,
     completed: completed.length,
     cancelled: cancelled.length,
     revenue,
     avgRating,
-    demandByCategory,
+    demandByCategory: demandByCategoryName,
     cancellationReasons,
     shortageAreaCount: Object.keys(shortageAreas).length,
   }));

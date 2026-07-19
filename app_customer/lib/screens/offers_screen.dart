@@ -249,127 +249,150 @@ class _OffersScreenState extends State<OffersScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? Center(
-              child: Text(_error!, style: TextStyle(color: scheme.error)),
-            )
-          : sentOffers.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.hourglass_empty,
-                    size: 40,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Waiting for workers to send offers...',
-                    style: TextStyle(color: scheme.onSurfaceVariant),
-                  ),
-                ],
-              ),
-            )
           : RefreshIndicator(
               onRefresh: _load,
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: sentOffers.length,
-                itemBuilder: (context, i) {
-                  final offer = sentOffers[i];
-                  final tags = <(String, IconData)>[
-                    if (offer == bestPrice)
-                      ('Best price', Icons.savings_outlined),
-                    if (offer == fastest) ('Fastest', Icons.bolt_outlined),
-                    if (offer.id == _topRatedOfferId)
-                      ('Top rated', Icons.star_outline),
-                    if (offer.id == _bestMatchOfferId)
-                      ('Best match', Icons.auto_awesome),
-                  ];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: Padding(
+              child: _error != null
+                  ? CustomScrollView(
+                      slivers: [
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Center(
+                            child: Text(
+                              _error!,
+                              style: TextStyle(color: scheme.error),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : sentOffers.isEmpty
+                  ? CustomScrollView(
+                      slivers: [
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.hourglass_empty,
+                                  size: 40,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Waiting for workers to send offers...',
+                                  style: TextStyle(
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView.builder(
                       padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Column(
+                      itemCount: sentOffers.length,
+                      itemBuilder: (context, i) {
+                        final offer = sentOffers[i];
+                        final tags = <(String, IconData)>[
+                          if (offer == bestPrice)
+                            ('Best price', Icons.savings_outlined),
+                          if (offer == fastest)
+                            ('Fastest', Icons.bolt_outlined),
+                          if (offer.id == _topRatedOfferId)
+                            ('Top rated', Icons.star_outline),
+                          if (offer.id == _bestMatchOfferId)
+                            ('Best match', Icons.auto_awesome),
+                        ];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      'Rs. ${offer.quote.toStringAsFixed(0)}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 22,
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Rs. ${offer.quote.toStringAsFixed(0)}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 22,
+                                            ),
+                                          ),
+                                          if (offer.etaMins != null)
+                                            Text(
+                                              'ETA: ${offer.etaMins} mins',
+                                              style: TextStyle(
+                                                color: scheme.onSurfaceVariant,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                     ),
-                                    if (offer.etaMins != null)
-                                      Text(
-                                        'ETA: ${offer.etaMins} mins',
-                                        style: TextStyle(
-                                          color: scheme.onSurfaceVariant,
-                                          fontSize: 13,
+                                    SizedBox(
+                                      width: 120,
+                                      child: FilledButton(
+                                        style: FilledButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                          ),
                                         ),
+                                        onPressed: _accepting
+                                            ? null
+                                            : () => _accept(offer),
+                                        child: const Text('Accept'),
                                       ),
+                                    ),
                                   ],
                                 ),
-                              ),
-                              SizedBox(
-                                width: 120,
-                                child: FilledButton(
-                                  style: FilledButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
+                                if (offer.message != null &&
+                                    offer.message!.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    offer.message!,
+                                    style: TextStyle(
+                                      color: scheme.onSurfaceVariant,
                                     ),
                                   ),
-                                  onPressed: _accepting
-                                      ? null
-                                      : () => _accept(offer),
-                                  child: const Text('Accept'),
-                                ),
-                              ),
-                            ],
+                                ],
+                                if (offer.flaggedSuspicious) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'This quote looks unusual — double-check before accepting.',
+                                    style: TextStyle(
+                                      color: Colors.orange.shade800,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                                if (tags.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    tags.map((t) => t.$1).join(' · '),
+                                    style: TextStyle(
+                                      color: scheme.primary,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
-                          if (offer.message != null &&
-                              offer.message!.isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              offer.message!,
-                              style: TextStyle(color: scheme.onSurfaceVariant),
-                            ),
-                          ],
-                          if (offer.flaggedSuspicious) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              'This quote looks unusual — double-check before accepting.',
-                              style: TextStyle(
-                                color: Colors.orange.shade800,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                          if (tags.isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              tags.map((t) => t.$1).join(' · '),
-                              style: TextStyle(
-                                color: scheme.primary,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
     );
   }

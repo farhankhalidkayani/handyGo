@@ -44,6 +44,14 @@ class _WalletScreenState extends State<WalletScreen> {
     super.dispose();
   }
 
+  Future<void> _refresh() async {
+    final refreshed = await AppServices.profiles.findWorkerProfileByUserId(
+      _worker.userId,
+    );
+    if (mounted && refreshed != null) setState(() => _worker = refreshed);
+    await _loadTip();
+  }
+
   Future<void> _loadTip() async {
     try {
       final result = await AppServices.profiles.getPerformanceTip(_worker);
@@ -118,194 +126,200 @@ class _WalletScreenState extends State<WalletScreen> {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Wallet')),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [scheme.primary, scheme.primary.withValues(alpha: 0.7)],
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.account_balance_wallet_outlined,
-                      color: scheme.onPrimary.withValues(alpha: 0.9),
-                      size: 18,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Available balance',
-                      style: TextStyle(
-                        color: scheme.onPrimary.withValues(alpha: 0.9),
-                        fontSize: 13,
-                      ),
-                    ),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    scheme.primary,
+                    scheme.primary.withValues(alpha: 0.7),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Rs. ${_worker.walletBalance.toStringAsFixed(0)}',
-                  style: TextStyle(
-                    color: scheme.onPrimary,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 36,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.account_balance_wallet_outlined,
+                        color: scheme.onPrimary.withValues(alpha: 0.9),
+                        size: 18,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Available balance',
+                        style: TextStyle(
+                          color: scheme.onPrimary.withValues(alpha: 0.9),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: scheme.onPrimary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    'Pending: Rs. ${_worker.pendingBalance.toStringAsFixed(0)}',
+                  const SizedBox(height: 8),
+                  Text(
+                    'Rs. ${_worker.walletBalance.toStringAsFixed(0)}',
                     style: TextStyle(
                       color: scheme.onPrimary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 36,
                     ),
                   ),
-                ),
-              ],
-            ),
-          ).animate().fadeIn(duration: 300.ms),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: (_withdrawing || _worker.walletBalance <= 0)
-                ? null
-                : _withdraw,
-            icon: _withdrawing
-                ? const SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
                     ),
-                  )
-                : const Icon(Icons.arrow_circle_down_outlined),
-            label: const Text('Withdraw'),
-          ),
-          if (_message != null) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.check_circle_outline,
-                    color: Colors.green,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
+                    decoration: BoxDecoration(
+                      color: scheme.onPrimary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     child: Text(
-                      _message!,
-                      style: const TextStyle(
-                        color: Colors.green,
+                      'Pending: Rs. ${_worker.pendingBalance.toStringAsFixed(0)}',
+                      style: TextStyle(
+                        color: scheme.onPrimary,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ],
               ),
+            ).animate().fadeIn(duration: 300.ms),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: (_withdrawing || _worker.walletBalance <= 0)
+                  ? null
+                  : _withdraw,
+              icon: _withdrawing
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.arrow_circle_down_outlined),
+              label: const Text('Withdraw'),
             ),
-          ],
-          if (_error != null) ...[
+            if (_message != null) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.check_circle_outline,
+                      color: Colors.green,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _message!,
+                        style: const TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (_error != null) ...[
+              const SizedBox(height: 10),
+              Text(_error!, style: TextStyle(color: scheme.error)),
+            ],
+            const SizedBox(height: 28),
+            Text('Performance', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 10),
-            Text(_error!, style: TextStyle(color: scheme.error)),
-          ],
-          const SizedBox(height: 28),
-          Text('Performance', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _StatColumn(
-                    icon: Icons.speed_outlined,
-                    label: 'Performance',
-                    value: '${_worker.performanceScore}/100',
-                  ),
-                ),
-                Container(
-                  width: 1,
-                  height: 36,
-                  color: scheme.outlineVariant.withValues(alpha: 0.5),
-                ),
-                Expanded(
-                  child: _StatColumn(
-                    icon: Icons.star_outline,
-                    label: 'Rating',
-                    value: _worker.rating.toStringAsFixed(1),
-                  ),
-                ),
-                Container(
-                  width: 1,
-                  height: 36,
-                  color: scheme.outlineVariant.withValues(alpha: 0.5),
-                ),
-                Expanded(
-                  child: _StatColumn(
-                    icon: Icons.task_alt_outlined,
-                    label: 'Jobs done',
-                    value: '${_worker.jobsCompleted}',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (_loadingTip)
-            const Center(child: CircularProgressIndicator())
-          else if (_tip != null)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: scheme.primaryContainer,
+                color: scheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(18),
               ),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.lightbulb_outline,
-                    color: scheme.onPrimaryContainer,
-                  ),
-                  const SizedBox(width: 10),
                   Expanded(
-                    child: Text(
-                      _tip!,
-                      style: TextStyle(color: scheme.onPrimaryContainer),
+                    child: _StatColumn(
+                      icon: Icons.speed_outlined,
+                      label: 'Performance',
+                      value: '${_worker.performanceScore}/100',
+                    ),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 36,
+                    color: scheme.outlineVariant.withValues(alpha: 0.5),
+                  ),
+                  Expanded(
+                    child: _StatColumn(
+                      icon: Icons.star_outline,
+                      label: 'Rating',
+                      value: _worker.rating.toStringAsFixed(1),
+                    ),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 36,
+                    color: scheme.outlineVariant.withValues(alpha: 0.5),
+                  ),
+                  Expanded(
+                    child: _StatColumn(
+                      icon: Icons.task_alt_outlined,
+                      label: 'Jobs done',
+                      value: '${_worker.jobsCompleted}',
                     ),
                   ),
                 ],
               ),
-            ).animate().fadeIn(duration: 300.ms),
-        ],
+            ),
+            const SizedBox(height: 16),
+            if (_loadingTip)
+              const Center(child: CircularProgressIndicator())
+            else if (_tip != null)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.lightbulb_outline,
+                      color: scheme.onPrimaryContainer,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _tip!,
+                        style: TextStyle(color: scheme.onPrimaryContainer),
+                      ),
+                    ),
+                  ],
+                ),
+              ).animate().fadeIn(duration: 300.ms),
+          ],
+        ),
       ),
     );
   }

@@ -110,89 +110,92 @@ class _ChatScreenState extends State<ChatScreen> {
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _messages.length,
-                    itemBuilder: (context, i) {
-                      final m = _messages[i];
-                      final isMine = m.senderId == widget.senderId;
-                      return Align(
-                        alignment: isMine
-                            ? Alignment.centerRight
-                            : Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 4),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
-                          constraints: const BoxConstraints(maxWidth: 320),
-                          decoration: BoxDecoration(
-                            color: m.aiFlagged
-                                ? Colors.red.withValues(alpha: 0.15)
-                                : isMine
-                                ? scheme.primaryContainer
-                                : scheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.only(
-                              topLeft: const Radius.circular(16),
-                              topRight: const Radius.circular(16),
-                              bottomLeft: Radius.circular(isMine ? 16 : 4),
-                              bottomRight: Radius.circular(isMine ? 4 : 16),
+                : RefreshIndicator(
+                    onRefresh: _load,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _messages.length,
+                      itemBuilder: (context, i) {
+                        final m = _messages[i];
+                        final isMine = m.senderId == widget.senderId;
+                        return Align(
+                          alignment: isMine
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
                             ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                m.text,
-                                style: TextStyle(
-                                  color: isMine
-                                      ? scheme.onPrimaryContainer
-                                      : scheme.onSurfaceVariant,
-                                ),
+                            constraints: const BoxConstraints(maxWidth: 320),
+                            decoration: BoxDecoration(
+                              color: m.aiFlagged
+                                  ? Colors.red.withValues(alpha: 0.15)
+                                  : isMine
+                                  ? scheme.primaryContainer
+                                  : scheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.only(
+                                topLeft: const Radius.circular(16),
+                                topRight: const Radius.circular(16),
+                                bottomLeft: Radius.circular(isMine ? 16 : 4),
+                                bottomRight: Radius.circular(isMine ? 4 : 16),
                               ),
-                              if (!isMine &&
-                                  m.translatedText != null &&
-                                  m.translatedText != m.text) ...[
-                                const SizedBox(height: 4),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Text(
-                                  m.translatedText!,
+                                  m.text,
                                   style: TextStyle(
-                                    fontStyle: FontStyle.italic,
-                                    fontSize: 12,
-                                    color: scheme.onSurfaceVariant.withValues(
-                                      alpha: 0.8,
-                                    ),
+                                    color: isMine
+                                        ? scheme.onPrimaryContainer
+                                        : scheme.onSurfaceVariant,
                                   ),
                                 ),
-                              ],
-                              if (m.aiFlagged) ...[
-                                const SizedBox(height: 4),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.warning_amber_rounded,
-                                      size: 13,
-                                      color: Colors.red,
-                                    ),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      m.flagReason ?? 'flagged for review',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.red,
-                                        fontWeight: FontWeight.w600,
+                                if (!isMine &&
+                                    m.translatedText != null &&
+                                    m.translatedText != m.text) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    m.translatedText!,
+                                    style: TextStyle(
+                                      fontStyle: FontStyle.italic,
+                                      fontSize: 12,
+                                      color: scheme.onSurfaceVariant.withValues(
+                                        alpha: 0.8,
                                       ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
+                                if (m.aiFlagged) ...[
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.warning_amber_rounded,
+                                        size: 13,
+                                        color: Colors.red,
+                                      ),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        m.flagReason ?? 'flagged for review',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.red,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ],
-                            ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
           ),
           Container(
