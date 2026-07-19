@@ -20,11 +20,24 @@ class AuthService {
   /// resolve to the wrong (expired/deleted) session.
   Future<String> requestOtp(String email) async {
     clearStaleCookieFallback();
-    final token = await account.createEmailToken(userId: ID.unique(), email: email);
+    final token =
+        await account.createEmailToken(userId: ID.unique(), email: email);
     return token.userId;
   }
 
-  Future<models.Session> verifyOtp({required String userId, required String otp}) {
+  /// On native (dart:io) builds, Appwrite's client persists session cookies to disk
+  /// (unlike web's in-memory cookie), so a still-valid session from a previous run can
+  /// survive even when the app's own routing (e.g. splash screen) incorrectly believes
+  /// there's no active session — createSession then fails with "session is active" even
+  /// though the OTP itself was correct. Clearing any existing session first (best-effort,
+  /// ignored if none exists) makes this call idempotent regardless of that stale state.
+  Future<models.Session> verifyOtp(
+      {required String userId, required String otp}) async {
+    try {
+      await account.deleteSession(sessionId: 'current');
+    } catch (_) {
+      // no active session — nothing to clear
+    }
     return account.createSession(userId: userId, secret: otp);
   }
 

@@ -1,15 +1,15 @@
-import 'package:appwrite/appwrite.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:handygo_shared/handygo_shared.dart';
 
 import '../services/app_services.dart';
 import 'active_job_screen.dart';
-import 'chat_screen.dart';
 import 'language_select_screen.dart';
 import 'notifications_screen.dart';
+import 'open_jobs_screen.dart';
 import 'safety_center_screen.dart';
-import 'send_offer_screen.dart';
 import 'wallet_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -28,15 +28,13 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   late WorkerProfile _worker;
-  Future<Booking?>? _activeJobFuture;
-  Future<List<Booking>>? _openJobsFuture;
+  Booking? _activeJob;
+  bool _loading = true;
   bool _togglingAvailability = false;
   String? _error;
   int _unreadCount = 0;
-  final Set<String> _declinedJobIds = {};
   double _todayEarnings = 0;
-  RealtimeSubscription? _bookingSub;
-  RealtimeSubscription? _transactionSub;
+  Timer? _pollTimer;
 
   @override
   void initState() {
@@ -45,18 +43,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _refresh();
     _loadUnreadCount();
     _loadTodayEarnings();
-    _bookingSub = AppServices.bookings.subscribeToBookings();
-    _bookingSub!.stream.listen((_) {
-      if (mounted) setState(_refresh);
+    // Polling instead of a realtime subscription: the raw bookings channel fans out every
+    // booking in the whole app, not just this worker's, so under active load a
+    // subscription-driven refresh would tear down/recreate the open-jobs FutureBuilder
+    // faster than it could ever resolve. Plain fields updated via setState (rather than a
+    // Future re-assigned into a FutureBuilder on every tick) avoid that instability
+    // entirely — old data stays visible while a background refresh is in flight.
+    _pollTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      _refresh();
+      _loadTodayEarnings();
     });
-    _transactionSub = AppServices.transactions.subscribeToTransactions();
-    _transactionSub!.stream.listen((_) => _loadTodayEarnings());
   }
 
   @override
   void dispose() {
-    _bookingSub?.close();
-    _transactionSub?.close();
+    _pollTimer?.cancel();
     super.dispose();
   }
 
@@ -103,30 +104,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadUnreadCount();
   }
 
-  void _refresh() {
-    _activeJobFuture = AppServices.bookings.findActiveForWorker(
+  Future<void> _refresh() async {
+    final activeJob = await AppServices.bookings.findActiveForWorker(
       widget.profile.id,
     );
-    if (_worker.availability == 'online') {
-      _openJobsFuture = _loadOpenJobs();
-    }
+    if (!mounted) return;
+    setState(() {
+      _activeJob = activeJob;
+      _loading = false;
+    });
   }
 
   Future<void> _pullToRefresh() async {
-    setState(_refresh);
-    await _activeJobFuture;
-    await _openJobsFuture;
+    await _refresh();
     await _loadTodayEarnings();
     await _loadUnreadCount();
-  }
-
-  Future<List<Booking>> _loadOpenJobs() async {
-    final categories = await AppServices.categories.listAll();
-    final categoryIds = categories
-        .where((c) => _worker.skills.contains(c.name))
-        .map((c) => c.id)
-        .toList();
-    return AppServices.bookings.listOpenBookings(categoryIds);
   }
 
   Future<void> _toggleAvailability(bool online) async {
@@ -154,23 +146,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           pendingBalance: _worker.pendingBalance,
           performanceScore: _worker.performanceScore,
         );
-        _refresh();
       });
+      await _refresh();
     } catch (e) {
       setState(() => _error = 'Could not update availability: $e');
     } finally {
       if (mounted) setState(() => _togglingAvailability = false);
     }
-  }
-
-  Future<void> _sendOffer(Booking booking) async {
-    final sent = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) =>
-            SendOfferScreen(profile: widget.profile, booking: booking),
-      ),
-    );
-    if (sent == true && mounted) setState(_refresh);
   }
 
   void _openActiveJob(Booking booking) {
@@ -181,7 +163,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ActiveJobScreen(profile: widget.profile, bookingId: booking.id),
           ),
         )
-        .then((_) => setState(_refresh));
+        .then((_) => _refresh());
   }
 
   Future<void> _logout(BuildContext context) async {
@@ -252,315 +234,247 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: FutureBuilder<Booking?>(
-        future: _activeJobFuture,
-        builder: (context, activeSnapshot) {
-          final activeJob = activeSnapshot.data;
+      body: Builder(
+        builder: (context) {
+          final activeJob = _activeJob;
           return RefreshIndicator(
             onRefresh: _pullToRefresh,
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: scheme.primaryContainer,
-                      child: Text(
-                        widget.profile.name.isNotEmpty
-                            ? widget.profile.name[0].toUpperCase()
-                            : '?',
-                        style: TextStyle(
-                          color: scheme.onPrimaryContainer,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 18,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Welcome, ${widget.profile.name}',
-                            style: Theme.of(context).textTheme.headlineSmall,
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.star_rounded,
-                                size: 16,
-                                color: Colors.amber.shade600,
-                              ),
-                              const SizedBox(width: 3),
-                              Expanded(
-                                child: Text(
-                                  '${_worker.rating.toStringAsFixed(1)} · ${_worker.jobsCompleted} jobs · ${_worker.skills.join(', ')}',
-                                  style: TextStyle(
-                                    color: scheme.onSurfaceVariant,
-                                    fontSize: 12,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ).animate().fadeIn(duration: 300.ms),
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        scheme.primary,
-                        scheme.primary.withValues(alpha: 0.75),
-                      ],
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                if (_loading)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 120),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else ...[
+                  Row(
                     children: [
-                      _DashboardStat(
-                        label: 'Today',
-                        value: 'Rs. ${_todayEarnings.toStringAsFixed(0)}',
-                        onColor: scheme.onPrimary,
-                      ),
-                      _DashboardStat(
-                        label: 'Wallet',
-                        value:
-                            'Rs. ${_worker.walletBalance.toStringAsFixed(0)}',
-                        onColor: scheme.onPrimary,
-                      ),
-                      _DashboardStat(
-                        label: 'Performance',
-                        value: '${_worker.performanceScore}/100',
-                        onColor: scheme.onPrimary,
-                      ),
-                    ],
-                  ),
-                ).animate().fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: scheme.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      online ? 'Online — receiving jobs' : 'Offline',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    secondary: Icon(
-                      online ? Icons.wifi_tethering : Icons.wifi_tethering_off,
-                      color: online ? Colors.green : scheme.onSurfaceVariant,
-                    ),
-                    value: online,
-                    onChanged: _togglingAvailability
-                        ? null
-                        : _toggleAvailability,
-                  ),
-                ),
-                if (_error != null) ...[
-                  const SizedBox(height: 8),
-                  Text(_error!, style: TextStyle(color: scheme.error)),
-                ],
-                const SizedBox(height: 20),
-                if (activeJob != null) ...[
-                  Text(
-                    'Active job',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 10),
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      onTap: () => _openActiveJob(activeJob),
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: scheme.secondaryContainer,
-                          borderRadius: BorderRadius.circular(18),
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundColor: scheme.primaryContainer,
+                        child: Text(
+                          widget.profile.name.isNotEmpty
+                              ? widget.profile.name[0].toUpperCase()
+                              : '?',
+                          style: TextStyle(
+                            color: scheme.onPrimaryContainer,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
+                          ),
                         ),
-                        child: Row(
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.build_outlined,
-                              color: scheme.onSecondaryContainer,
+                            Text(
+                              'Welcome, ${widget.profile.name}',
+                              style: Theme.of(context).textTheme.headlineSmall,
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    activeJob.problemText,
-                                    maxLines: 1,
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.star_rounded,
+                                  size: 16,
+                                  color: Colors.amber.shade600,
+                                ),
+                                const SizedBox(width: 3),
+                                Expanded(
+                                  child: Text(
+                                    '${_worker.rating.toStringAsFixed(1)} · ${_worker.jobsCompleted} jobs · ${_worker.skills.join(', ')}',
+                                    style: TextStyle(
+                                      color: scheme.onSurfaceVariant,
+                                      fontSize: 12,
+                                    ),
                                     overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: scheme.onSecondaryContainer,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                    maxLines: 1,
                                   ),
-                                  Text(
-                                    activeJob.status.wire,
-                                    style: TextStyle(
-                                      color: scheme.onSecondaryContainer
-                                          .withValues(alpha: 0.8),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Icon(
-                              Icons.chevron_right,
-                              color: scheme.onSecondaryContainer,
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
-                    ),
+                    ],
                   ).animate().fadeIn(duration: 300.ms),
-                ] else if (!online) ...[
-                  _EmptyHint(
-                    icon: Icons.wifi_tethering_off,
-                    text: 'Go online to see incoming job requests.',
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          scheme.primary,
+                          scheme.primary.withValues(alpha: 0.75),
+                        ],
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _DashboardStat(
+                          label: 'Today',
+                          value: 'Rs. ${_todayEarnings.toStringAsFixed(0)}',
+                          onColor: scheme.onPrimary,
+                        ),
+                        _DashboardStat(
+                          label: 'Wallet',
+                          value:
+                              'Rs. ${_worker.walletBalance.toStringAsFixed(0)}',
+                          onColor: scheme.onPrimary,
+                        ),
+                        _DashboardStat(
+                          label: 'Performance',
+                          value: '${_worker.performanceScore}/100',
+                          onColor: scheme.onPrimary,
+                        ),
+                      ],
+                    ),
+                  ).animate().fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        online ? 'Online — receiving jobs' : 'Offline',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      secondary: Icon(
+                        online
+                            ? Icons.wifi_tethering
+                            : Icons.wifi_tethering_off,
+                        color: online ? Colors.green : scheme.onSurfaceVariant,
+                      ),
+                      value: online,
+                      onChanged: _togglingAvailability
+                          ? null
+                          : _toggleAvailability,
+                    ),
                   ),
-                ] else ...[
-                  Text(
-                    'Open jobs matching your skills',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 10),
-                  FutureBuilder<List<Booking>>(
-                    future: _openJobsFuture,
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24),
-                          child: Center(child: CircularProgressIndicator()),
-                        );
-                      }
-                      final jobs = snapshot.data!
-                          .where((b) => !_declinedJobIds.contains(b.id))
-                          .toList();
-                      if (jobs.isEmpty) {
-                        return _EmptyHint(
-                          icon: Icons.inbox_outlined,
-                          text: 'No open jobs right now.',
-                        );
-                      }
-                      return Column(
-                        children: jobs
-                            .map(
-                              (b) => Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: Card(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(14),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          b.problemText,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.location_on_outlined,
-                                              size: 14,
-                                              color: scheme.onSurfaceVariant,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Expanded(
-                                              child: Text(
-                                                b.addressText,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  color:
-                                                      scheme.onSurfaceVariant,
-                                                  fontSize: 13,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 10),
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.end,
-                                          children: [
-                                            IconButton(
-                                              icon: const Icon(Icons.close),
-                                              tooltip:
-                                                  'Decline — hide from my list',
-                                              onPressed: () => setState(
-                                                () => _declinedJobIds.add(b.id),
-                                              ),
-                                            ),
-                                            IconButton(
-                                              icon: const Icon(
-                                                Icons.chat_bubble_outline,
-                                              ),
-                                              tooltip:
-                                                  'Ask the customer a question before offering',
-                                              onPressed: () =>
-                                                  Navigator.of(context).push(
-                                                    MaterialPageRoute(
-                                                      builder: (_) =>
-                                                          ChatScreen(
-                                                            bookingId: b.id,
-                                                            senderId: widget
-                                                                .profile
-                                                                .id,
-                                                            senderRole:
-                                                                'worker',
-                                                            threadWorkerId:
-                                                                widget
-                                                                    .profile
-                                                                    .id,
-                                                          ),
-                                                    ),
-                                                  ),
-                                            ),
-                                            const SizedBox(width: 4),
-                                            FilledButton(
-                                              onPressed: () => _sendOffer(b),
-                                              child: const Text('Offer'),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
+                  if (_error != null) ...[
+                    const SizedBox(height: 8),
+                    Text(_error!, style: TextStyle(color: scheme.error)),
+                  ],
+                  const SizedBox(height: 20),
+                  if (activeJob != null) ...[
+                    Text(
+                      'Active job',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 10),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: () => _openActiveJob(activeJob),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: scheme.secondaryContainer,
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.build_outlined,
+                                color: scheme.onSecondaryContainer,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      activeJob.problemText,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: scheme.onSecondaryContainer,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
+                                    Text(
+                                      activeJob.status.wire,
+                                      style: TextStyle(
+                                        color: scheme.onSecondaryContainer
+                                            .withValues(alpha: 0.8),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right,
+                                color: scheme.onSecondaryContainer,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ).animate().fadeIn(duration: 300.ms),
+                  ] else if (!online) ...[
+                    _EmptyHint(
+                      icon: Icons.wifi_tethering_off,
+                      text: 'Go online to see incoming job requests.',
+                    ),
+                  ] else ...[
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => OpenJobsScreen(
+                              profile: widget.profile,
+                              worker: _worker,
+                            ),
+                          ),
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: scheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.work_outline,
+                                color: scheme.onPrimaryContainer,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'View open jobs matching your skills',
+                                  style: TextStyle(
+                                    color: scheme.onPrimaryContainer,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
-                            )
-                            .toList(),
-                      );
-                    },
-                  ),
+                              Icon(
+                                Icons.chevron_right,
+                                color: scheme.onPrimaryContainer,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ],
             ),
@@ -588,6 +502,7 @@ class _EmptyHint extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 32, color: scheme.onSurfaceVariant),
           const SizedBox(height: 8),
