@@ -65,7 +65,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         backgroundColor: isSos ? Colors.red.shade700 : null,
         foregroundColor: isSos ? Colors.white : null,
         iconTheme: isSos ? const IconThemeData(color: Colors.white) : null,
-        actions: [IconButton(icon: const Icon(Icons.logout), onPressed: () => _logout(context))],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => _logout(context),
+          ),
+        ],
       ),
       drawer: NavigationDrawer(
         selectedIndex: _tab,
@@ -77,9 +82,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
           DrawerHeader(
             child: Row(
               children: [
-                Icon(Icons.admin_panel_settings_outlined, size: 32, color: scheme.primary),
+                Icon(
+                  Icons.admin_panel_settings_outlined,
+                  size: 32,
+                  color: scheme.primary,
+                ),
                 const SizedBox(width: 12),
-                Text('Handy Go — Admin', style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  'Handy Go — Admin',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
               ],
             ),
           ),

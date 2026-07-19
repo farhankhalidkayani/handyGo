@@ -56,7 +56,12 @@ class UnderReviewScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Verification'),
-        actions: [IconButton(icon: const Icon(Icons.logout), onPressed: () => _logout(context))],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => _logout(context),
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
@@ -66,11 +71,18 @@ class UnderReviewScreen extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(color: _iconColor(scheme).withValues(alpha: 0.12), shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: _iconColor(scheme).withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
                 child: Icon(_icon, size: 48, color: _iconColor(scheme)),
               ),
               const SizedBox(height: 20),
-              Text(_message, textAlign: TextAlign.center, style: TextStyle(color: scheme.onSurfaceVariant)),
+              Text(
+                _message,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: scheme.onSurfaceVariant),
+              ),
             ],
           ),
         ),

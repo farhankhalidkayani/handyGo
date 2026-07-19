@@ -10,7 +10,11 @@ class SendOfferScreen extends StatefulWidget {
   final UserProfile profile;
   final Booking booking;
 
-  const SendOfferScreen({super.key, required this.profile, required this.booking});
+  const SendOfferScreen({
+    super.key,
+    required this.profile,
+    required this.booking,
+  });
 
   @override
   State<SendOfferScreen> createState() => _SendOfferScreenState();
@@ -40,7 +44,9 @@ class _SendOfferScreenState extends State<SendOfferScreen> {
   /// reports/SOS misuse.
   Future<void> _loadCustomerRisk() async {
     try {
-      final customer = await AppServices.profiles.findById(widget.booking.customerId);
+      final customer = await AppServices.profiles.findById(
+        widget.booking.customerId,
+      );
       if (mounted) setState(() => _customerRiskScore = customer?.riskScore);
     } catch (_) {
       // best-effort — never block offer creation on this
@@ -49,13 +55,18 @@ class _SendOfferScreenState extends State<SendOfferScreen> {
 
   Future<void> _loadSuggestion() async {
     try {
-      final result = await AppServices.bookings.getWorkerAssist(booking: widget.booking, mode: 'quote');
+      final result = await AppServices.bookings.getWorkerAssist(
+        booking: widget.booking,
+        mode: 'quote',
+      );
       if (!mounted) return;
       setState(() {
-        _quoteController.text = (result['suggestedQuote'] as num?)?.toStringAsFixed(0) ?? '';
+        _quoteController.text =
+            (result['suggestedQuote'] as num?)?.toStringAsFixed(0) ?? '';
         _messageController.text = result['offerMessage'] as String? ?? '';
         _suggestedTools = (result['tools'] as List?)?.cast<String>() ?? [];
-        _suggestedMaterials = (result['materials'] as List?)?.cast<String>() ?? [];
+        _suggestedMaterials =
+            (result['materials'] as List?)?.cast<String>() ?? [];
       });
     } catch (_) {
       // AI suggestion is a convenience, not a requirement — worker can still fill in manually
@@ -110,18 +121,34 @@ class _SendOfferScreenState extends State<SendOfferScreen> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(18)),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(18),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.booking.problemText, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                Text(
+                  widget.booking.problemText,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(Icons.location_on_outlined, size: 14, color: scheme.onSurfaceVariant),
+                    Icon(
+                      Icons.location_on_outlined,
+                      size: 14,
+                      color: scheme.onSurfaceVariant,
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
-                      child: Text(widget.booking.addressText, style: TextStyle(color: scheme.onSurfaceVariant)),
+                      child: Text(
+                        widget.booking.addressText,
+                        style: TextStyle(color: scheme.onSurfaceVariant),
+                      ),
                     ),
                   ],
                 ),
@@ -132,16 +159,26 @@ class _SendOfferScreenState extends State<SendOfferScreen> {
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+              ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.warning_amber, color: Colors.red.shade700, size: 18),
+                  Icon(
+                    Icons.warning_amber,
+                    color: Colors.red.shade700,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'This customer has a low trust score ($_customerRiskScore/100) from past cancellations or reports — proceed carefully.',
-                      style: TextStyle(color: Colors.red.shade800, fontSize: 12),
+                      style: TextStyle(
+                        color: Colors.red.shade800,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ],
@@ -152,35 +189,65 @@ class _SendOfferScreenState extends State<SendOfferScreen> {
           if (_loadingSuggestion)
             Row(
               children: [
-                SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: scheme.primary)),
+                SizedBox(
+                  height: 16,
+                  width: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: scheme.primary,
+                  ),
+                ),
                 const SizedBox(width: 10),
-                Text('Getting AI quote suggestion...', style: TextStyle(color: scheme.onSurfaceVariant)),
+                Text(
+                  'Getting AI quote suggestion...',
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                ),
               ],
             ),
           if (_suggestedTools.isNotEmpty || _suggestedMaterials.isNotEmpty)
             Container(
               margin: const EdgeInsets.only(bottom: 16),
               padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: scheme.primaryContainer, borderRadius: BorderRadius.circular(16)),
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer,
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.auto_awesome, size: 15, color: scheme.onPrimaryContainer),
+                      Icon(
+                        Icons.auto_awesome,
+                        size: 15,
+                        color: scheme.onPrimaryContainer,
+                      ),
                       const SizedBox(width: 6),
-                      Text('AI suggestions',
-                          style: TextStyle(
-                              color: scheme.onPrimaryContainer, fontWeight: FontWeight.w700, fontSize: 12)),
+                      Text(
+                        'AI suggestions',
+                        style: TextStyle(
+                          color: scheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
                   ),
                   if (_suggestedTools.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    _ChipRow(icon: Icons.build_outlined, items: _suggestedTools, scheme: scheme),
+                    _ChipRow(
+                      icon: Icons.build_outlined,
+                      items: _suggestedTools,
+                      scheme: scheme,
+                    ),
                   ],
                   if (_suggestedMaterials.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    _ChipRow(icon: Icons.inventory_2_outlined, items: _suggestedMaterials, scheme: scheme),
+                    _ChipRow(
+                      icon: Icons.inventory_2_outlined,
+                      items: _suggestedMaterials,
+                      scheme: scheme,
+                    ),
                   ],
                 ],
               ),
@@ -192,7 +259,10 @@ class _SendOfferScreenState extends State<SendOfferScreen> {
                 child: TextField(
                   controller: _quoteController,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Your quote (Rs.)', prefixIcon: Icon(Icons.payments_outlined)),
+                  decoration: const InputDecoration(
+                    labelText: 'Your quote (Rs.)',
+                    prefixIcon: Icon(Icons.payments_outlined),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -200,7 +270,10 @@ class _SendOfferScreenState extends State<SendOfferScreen> {
                 child: TextField(
                   controller: _etaController,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'ETA (mins)', prefixIcon: Icon(Icons.schedule)),
+                  decoration: const InputDecoration(
+                    labelText: 'ETA (mins)',
+                    prefixIcon: Icon(Icons.schedule),
+                  ),
                 ),
               ),
             ],
@@ -208,7 +281,9 @@ class _SendOfferScreenState extends State<SendOfferScreen> {
           const SizedBox(height: 16),
           TextField(
             controller: _messageController,
-            decoration: const InputDecoration(labelText: 'Message — AI-drafted, editable'),
+            decoration: const InputDecoration(
+              labelText: 'Message — AI-drafted, editable',
+            ),
             maxLines: 2,
           ),
           const SizedBox(height: 24),
@@ -220,7 +295,13 @@ class _SendOfferScreenState extends State<SendOfferScreen> {
             onPressed: _sending ? null : _send,
             icon: _sending
                 ? const SizedBox(
-                    height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
                 : const Icon(Icons.send_outlined),
             label: const Text('Send'),
           ),
@@ -235,7 +316,11 @@ class _ChipRow extends StatelessWidget {
   final List<String> items;
   final ColorScheme scheme;
 
-  const _ChipRow({required this.icon, required this.items, required this.scheme});
+  const _ChipRow({
+    required this.icon,
+    required this.items,
+    required this.scheme,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -243,21 +328,29 @@ class _ChipRow extends StatelessWidget {
       spacing: 6,
       runSpacing: 6,
       children: items
-          .map((item) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: scheme.surface.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(icon, size: 12, color: scheme.onPrimaryContainer),
-                    const SizedBox(width: 4),
-                    Text(item, style: TextStyle(fontSize: 11, color: scheme.onPrimaryContainer)),
-                  ],
-                ),
-              ))
+          .map(
+            (item) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: scheme.surface.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 12, color: scheme.onPrimaryContainer),
+                  const SizedBox(width: 4),
+                  Text(
+                    item,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: scheme.onPrimaryContainer,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
           .toList(),
     );
   }

@@ -114,10 +114,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _pullToRefresh() async {
     setState(_refresh);
-    await Future.wait([
-      _activeJobFuture ?? Future.value(),
-      _openJobsFuture ?? Future.value(),
-    ]);
+    await _activeJobFuture;
+    await _openJobsFuture;
     await _loadTodayEarnings();
     await _loadUnreadCount();
   }
@@ -258,302 +256,314 @@ class _DashboardScreenState extends State<DashboardScreen> {
         future: _activeJobFuture,
         builder: (context, activeSnapshot) {
           final activeJob = activeSnapshot.data;
-          return ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundColor: scheme.primaryContainer,
-                    child: Text(
-                      widget.profile.name.isNotEmpty
-                          ? widget.profile.name[0].toUpperCase()
-                          : '?',
-                      style: TextStyle(
-                        color: scheme.onPrimaryContainer,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Welcome, ${widget.profile.name}',
-                          style: Theme.of(context).textTheme.headlineSmall,
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.star_rounded,
-                              size: 16,
-                              color: Colors.amber.shade600,
-                            ),
-                            const SizedBox(width: 3),
-                            Expanded(
-                              child: Text(
-                                '${_worker.rating.toStringAsFixed(1)} · ${_worker.jobsCompleted} jobs · ${_worker.skills.join(', ')}',
-                                style: TextStyle(
-                                  color: scheme.onSurfaceVariant,
-                                  fontSize: 12,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ).animate().fadeIn(duration: 300.ms),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      scheme.primary,
-                      scheme.primary.withValues(alpha: 0.75),
-                    ],
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          return RefreshIndicator(
+            onRefresh: _pullToRefresh,
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                Row(
                   children: [
-                    _DashboardStat(
-                      label: 'Today',
-                      value: 'Rs. ${_todayEarnings.toStringAsFixed(0)}',
-                      onColor: scheme.onPrimary,
-                    ),
-                    _DashboardStat(
-                      label: 'Wallet',
-                      value: 'Rs. ${_worker.walletBalance.toStringAsFixed(0)}',
-                      onColor: scheme.onPrimary,
-                    ),
-                    _DashboardStat(
-                      label: 'Performance',
-                      value: '${_worker.performanceScore}/100',
-                      onColor: scheme.onPrimary,
-                    ),
-                  ],
-                ),
-              ).animate().fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: scheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    online ? 'Online — receiving jobs' : 'Offline',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  secondary: Icon(
-                    online ? Icons.wifi_tethering : Icons.wifi_tethering_off,
-                    color: online ? Colors.green : scheme.onSurfaceVariant,
-                  ),
-                  value: online,
-                  onChanged: _togglingAvailability ? null : _toggleAvailability,
-                ),
-              ),
-              if (_error != null) ...[
-                const SizedBox(height: 8),
-                Text(_error!, style: TextStyle(color: scheme.error)),
-              ],
-              const SizedBox(height: 20),
-              if (activeJob != null) ...[
-                Text(
-                  'Active job',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 10),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(18),
-                    onTap: () => _openActiveJob(activeJob),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: scheme.secondaryContainer,
-                        borderRadius: BorderRadius.circular(18),
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: scheme.primaryContainer,
+                      child: Text(
+                        widget.profile.name.isNotEmpty
+                            ? widget.profile.name[0].toUpperCase()
+                            : '?',
+                        style: TextStyle(
+                          color: scheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 18,
+                        ),
                       ),
-                      child: Row(
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.build_outlined,
-                            color: scheme.onSecondaryContainer,
+                          Text(
+                            'Welcome, ${widget.profile.name}',
+                            style: Theme.of(context).textTheme.headlineSmall,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  activeJob.problemText,
-                                  maxLines: 1,
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.star_rounded,
+                                size: 16,
+                                color: Colors.amber.shade600,
+                              ),
+                              const SizedBox(width: 3),
+                              Expanded(
+                                child: Text(
+                                  '${_worker.rating.toStringAsFixed(1)} · ${_worker.jobsCompleted} jobs · ${_worker.skills.join(', ')}',
+                                  style: TextStyle(
+                                    color: scheme.onSurfaceVariant,
+                                    fontSize: 12,
+                                  ),
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: scheme.onSecondaryContainer,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  maxLines: 1,
                                 ),
-                                Text(
-                                  activeJob.status.wire,
-                                  style: TextStyle(
-                                    color: scheme.onSecondaryContainer
-                                        .withValues(alpha: 0.8),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(
-                            Icons.chevron_right,
-                            color: scheme.onSecondaryContainer,
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                  ),
+                  ],
                 ).animate().fadeIn(duration: 300.ms),
-              ] else if (!online) ...[
-                _EmptyHint(
-                  icon: Icons.wifi_tethering_off,
-                  text: 'Go online to see incoming job requests.',
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        scheme.primary,
+                        scheme.primary.withValues(alpha: 0.75),
+                      ],
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _DashboardStat(
+                        label: 'Today',
+                        value: 'Rs. ${_todayEarnings.toStringAsFixed(0)}',
+                        onColor: scheme.onPrimary,
+                      ),
+                      _DashboardStat(
+                        label: 'Wallet',
+                        value:
+                            'Rs. ${_worker.walletBalance.toStringAsFixed(0)}',
+                        onColor: scheme.onPrimary,
+                      ),
+                      _DashboardStat(
+                        label: 'Performance',
+                        value: '${_worker.performanceScore}/100',
+                        onColor: scheme.onPrimary,
+                      ),
+                    ],
+                  ),
+                ).animate().fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      online ? 'Online — receiving jobs' : 'Offline',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    secondary: Icon(
+                      online ? Icons.wifi_tethering : Icons.wifi_tethering_off,
+                      color: online ? Colors.green : scheme.onSurfaceVariant,
+                    ),
+                    value: online,
+                    onChanged: _togglingAvailability
+                        ? null
+                        : _toggleAvailability,
+                  ),
                 ),
-              ] else ...[
-                Text(
-                  'Open jobs matching your skills',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 10),
-                FutureBuilder<List<Booking>>(
-                  future: _openJobsFuture,
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-                    final jobs = snapshot.data!
-                        .where((b) => !_declinedJobIds.contains(b.id))
-                        .toList();
-                    if (jobs.isEmpty) {
-                      return _EmptyHint(
-                        icon: Icons.inbox_outlined,
-                        text: 'No open jobs right now.',
-                      );
-                    }
-                    return Column(
-                      children: jobs
-                          .map(
-                            (b) => Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Card(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(14),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        b.problemText,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.location_on_outlined,
-                                            size: 14,
-                                            color: scheme.onSurfaceVariant,
+                if (_error != null) ...[
+                  const SizedBox(height: 8),
+                  Text(_error!, style: TextStyle(color: scheme.error)),
+                ],
+                const SizedBox(height: 20),
+                if (activeJob != null) ...[
+                  Text(
+                    'Active job',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 10),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: () => _openActiveJob(activeJob),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: scheme.secondaryContainer,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.build_outlined,
+                              color: scheme.onSecondaryContainer,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    activeJob.problemText,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: scheme.onSecondaryContainer,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    activeJob.status.wire,
+                                    style: TextStyle(
+                                      color: scheme.onSecondaryContainer
+                                          .withValues(alpha: 0.8),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(
+                              Icons.chevron_right,
+                              color: scheme.onSecondaryContainer,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ).animate().fadeIn(duration: 300.ms),
+                ] else if (!online) ...[
+                  _EmptyHint(
+                    icon: Icons.wifi_tethering_off,
+                    text: 'Go online to see incoming job requests.',
+                  ),
+                ] else ...[
+                  Text(
+                    'Open jobs matching your skills',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 10),
+                  FutureBuilder<List<Booking>>(
+                    future: _openJobsFuture,
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      final jobs = snapshot.data!
+                          .where((b) => !_declinedJobIds.contains(b.id))
+                          .toList();
+                      if (jobs.isEmpty) {
+                        return _EmptyHint(
+                          icon: Icons.inbox_outlined,
+                          text: 'No open jobs right now.',
+                        );
+                      }
+                      return Column(
+                        children: jobs
+                            .map(
+                              (b) => Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: Card(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(14),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          b.problemText,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
                                           ),
-                                          const SizedBox(width: 4),
-                                          Expanded(
-                                            child: Text(
-                                              b.addressText,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                color: scheme.onSurfaceVariant,
-                                                fontSize: 13,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.location_on_outlined,
+                                              size: 14,
+                                              color: scheme.onSurfaceVariant,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                b.addressText,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  color:
+                                                      scheme.onSurfaceVariant,
+                                                  fontSize: 13,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.close),
-                                            tooltip:
-                                                'Decline — hide from my list',
-                                            onPressed: () => setState(
-                                              () => _declinedJobIds.add(b.id),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.end,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.close),
+                                              tooltip:
+                                                  'Decline — hide from my list',
+                                              onPressed: () => setState(
+                                                () => _declinedJobIds.add(b.id),
+                                              ),
                                             ),
-                                          ),
-                                          IconButton(
-                                            icon: const Icon(
-                                              Icons.chat_bubble_outline,
-                                            ),
-                                            tooltip:
-                                                'Ask the customer a question before offering',
-                                            onPressed: () =>
-                                                Navigator.of(context).push(
-                                                  MaterialPageRoute(
-                                                    builder: (_) => ChatScreen(
-                                                      bookingId: b.id,
-                                                      senderId:
-                                                          widget.profile.id,
-                                                      senderRole: 'worker',
-                                                      threadWorkerId:
-                                                          widget.profile.id,
+                                            IconButton(
+                                              icon: const Icon(
+                                                Icons.chat_bubble_outline,
+                                              ),
+                                              tooltip:
+                                                  'Ask the customer a question before offering',
+                                              onPressed: () =>
+                                                  Navigator.of(context).push(
+                                                    MaterialPageRoute(
+                                                      builder: (_) =>
+                                                          ChatScreen(
+                                                            bookingId: b.id,
+                                                            senderId: widget
+                                                                .profile
+                                                                .id,
+                                                            senderRole:
+                                                                'worker',
+                                                            threadWorkerId:
+                                                                widget
+                                                                    .profile
+                                                                    .id,
+                                                          ),
                                                     ),
                                                   ),
-                                                ),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          FilledButton(
-                                            onPressed: () => _sendOffer(b),
-                                            child: const Text('Offer'),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
+                                            ),
+                                            const SizedBox(width: 4),
+                                            FilledButton(
+                                              onPressed: () => _sendOffer(b),
+                                              child: const Text('Offer'),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          )
-                          .toList(),
-                    );
-                  },
-                ),
+                            )
+                            .toList(),
+                      );
+                    },
+                  ),
+                ],
               ],
-            ],
+            ),
           );
         },
       ),

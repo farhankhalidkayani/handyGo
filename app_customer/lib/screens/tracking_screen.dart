@@ -50,13 +50,20 @@ class TrackingScreen extends StatefulWidget {
   final UserProfile profile;
   final String bookingId;
 
-  const TrackingScreen({super.key, required this.profile, required this.bookingId});
+  const TrackingScreen({
+    super.key,
+    required this.profile,
+    required this.bookingId,
+  });
 
   @override
   State<TrackingScreen> createState() => _TrackingScreenState();
 }
 
-const _trackedStatuses = [BookingStatus.confirmed, BookingStatus.workerOnTheWay];
+const _trackedStatuses = [
+  BookingStatus.confirmed,
+  BookingStatus.workerOnTheWay,
+];
 
 class _TrackingScreenState extends State<TrackingScreen> {
   Booking? _booking;
@@ -107,13 +114,21 @@ class _TrackingScreenState extends State<TrackingScreen> {
         title: const Text('Incoming call'),
         content: const Text('The worker is calling you.'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Decline')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Accept')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Decline'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Accept'),
+          ),
         ],
       ),
     );
     if (accept != true) {
-      AppServices.calls.updateStatus(callId: call.id, status: 'declined').catchError((_) {});
+      AppServices.calls
+          .updateStatus(callId: call.id, status: 'declined')
+          .catchError((_) {});
       return;
     }
     if (!mounted) return;
@@ -154,10 +169,14 @@ class _TrackingScreenState extends State<TrackingScreen> {
 
   void _syncPolling() {
     final booking = _booking;
-    final shouldPoll = booking != null && _trackedStatuses.contains(booking.status);
+    final shouldPoll =
+        booking != null && _trackedStatuses.contains(booking.status);
     if (shouldPoll && _pollTimer == null) {
       _fetchWorkerPosition();
-      _pollTimer = Timer.periodic(const Duration(seconds: 15), (_) => _fetchWorkerPosition());
+      _pollTimer = Timer.periodic(
+        const Duration(seconds: 15),
+        (_) => _fetchWorkerPosition(),
+      );
     } else if (!shouldPoll && _pollTimer != null) {
       _pollTimer!.cancel();
       _pollTimer = null;
@@ -169,9 +188,19 @@ class _TrackingScreenState extends State<TrackingScreen> {
   Future<void> _fetchWorkerPosition() async {
     final workerId = _booking?.workerId;
     if (workerId == null) return;
-    final workerProfile = await AppServices.profiles.findWorkerProfileByUserId(workerId);
-    if (!mounted || workerProfile?.currentLat == null || workerProfile?.currentLng == null) return;
-    setState(() => _workerPos = latlong.LatLng(workerProfile!.currentLat!, workerProfile.currentLng!));
+    final workerProfile = await AppServices.profiles.findWorkerProfileByUserId(
+      workerId,
+    );
+    if (!mounted ||
+        workerProfile?.currentLat == null ||
+        workerProfile?.currentLng == null)
+      return;
+    setState(
+      () => _workerPos = latlong.LatLng(
+        workerProfile!.currentLat!,
+        workerProfile.currentLng!,
+      ),
+    );
   }
 
   Future<void> _confirmAndPay() async {
@@ -191,12 +220,16 @@ class _TrackingScreenState extends State<TrackingScreen> {
         nextStatus: BookingStatus.completed,
         changedByRole: 'system',
         changedById: widget.profile.id,
-        note: 'COD settled — real payment gateway is out of scope for this build',
+        note:
+            'COD settled — real payment gateway is out of scope for this build',
       );
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => RatingScreen(profile: widget.profile, bookingId: widget.bookingId),
+          builder: (_) => RatingScreen(
+            profile: widget.profile,
+            bookingId: widget.bookingId,
+          ),
         ),
       );
     } catch (e) {
@@ -250,8 +283,14 @@ class _TrackingScreenState extends State<TrackingScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Cancel this booking?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('No')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Yes, cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('No'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Yes, cancel'),
+          ),
         ],
       ),
     );
@@ -346,7 +385,10 @@ class _TrackingScreenState extends State<TrackingScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [scheme.primary, scheme.primary.withValues(alpha: 0.75)],
+                colors: [
+                  scheme.primary,
+                  scheme.primary.withValues(alpha: 0.75),
+                ],
               ),
             ),
             child: Row(
@@ -357,13 +399,21 @@ class _TrackingScreenState extends State<TrackingScreen> {
                     color: scheme.onPrimary.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(_statusIcons[booking.status] ?? Icons.info_outline, color: scheme.onPrimary, size: 26),
+                  child: Icon(
+                    _statusIcons[booking.status] ?? Icons.info_outline,
+                    color: scheme.onPrimary,
+                    size: 26,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Text(
                     _statusLabels[booking.status] ?? booking.status.wire,
-                    style: TextStyle(color: scheme.onPrimary, fontWeight: FontWeight.w700, fontSize: 18),
+                    style: TextStyle(
+                      color: scheme.onPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
+                    ),
                   ),
                 ),
               ],
@@ -382,12 +432,15 @@ class _TrackingScreenState extends State<TrackingScreen> {
                 if (booking.scheduledAt != null)
                   _InfoChip(
                     icon: Icons.event_outlined,
-                    label: 'Scheduled for: ${booking.scheduledAt!.toLocal()}'.split('.').first,
+                    label: 'Scheduled for: ${booking.scheduledAt!.toLocal()}'
+                        .split('.')
+                        .first,
                   ),
                 if (booking.finalQuote != null)
                   _InfoChip(
                     icon: Icons.payments_outlined,
-                    label: 'Quote: Rs. ${booking.finalQuote!.toStringAsFixed(0)}',
+                    label:
+                        'Quote: Rs. ${booking.finalQuote!.toStringAsFixed(0)}',
                   ),
               ],
             ),
@@ -397,7 +450,8 @@ class _TrackingScreenState extends State<TrackingScreen> {
             _WarningBanner(
               color: Colors.red,
               icon: Icons.pause_circle_outline,
-              text: 'This booking has been paused by an admin. Please contact support.',
+              text:
+                  'This booking has been paused by an admin. Please contact support.',
             ),
           ],
           if (booking.paymentBlocked) ...[
@@ -405,29 +459,46 @@ class _TrackingScreenState extends State<TrackingScreen> {
             _WarningBanner(
               color: Colors.orange,
               icon: Icons.block_outlined,
-              text: 'Payment for this booking is on hold pending an admin review.',
+              text:
+                  'Payment for this booking is on hold pending an admin review.',
             ),
           ],
-          if (_trackedStatuses.contains(booking.status) && _workerPos != null) ...[
+          if (_trackedStatuses.contains(booking.status) &&
+              _workerPos != null) ...[
             const SizedBox(height: 16),
             SizedBox(
               height: 180,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: FlutterMap(
-                  options: MapOptions(initialCenter: _workerPos!, initialZoom: 13),
+                  options: MapOptions(
+                    initialCenter: _workerPos!,
+                    initialZoom: 13,
+                  ),
                   children: [
                     TileLayer(
-                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                       userAgentPackageName: 'com.handygo.customer',
                     ),
-                    MarkerLayer(markers: [
-                      Marker(point: _workerPos!, child: const Icon(Icons.my_location, color: Colors.blue)),
-                      Marker(
-                        point: latlong.LatLng(booking.lat, booking.lng),
-                        child: const Icon(Icons.location_on, color: Colors.red),
-                      ),
-                    ]),
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: _workerPos!,
+                          child: const Icon(
+                            Icons.my_location,
+                            color: Colors.blue,
+                          ),
+                        ),
+                        Marker(
+                          point: latlong.LatLng(booking.lat, booking.lng),
+                          child: const Icon(
+                            Icons.location_on,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -443,7 +514,13 @@ class _TrackingScreenState extends State<TrackingScreen> {
               onPressed: _busy ? null : _confirmAndPay,
               icon: _busy
                   ? const SizedBox(
-                      height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : const Icon(Icons.check_circle_outline),
               label: const Text('Confirm & pay (COD)'),
             ),
@@ -461,34 +538,51 @@ class _TrackingScreenState extends State<TrackingScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.build_circle_outlined, color: scheme.onTertiaryContainer),
+                      Icon(
+                        Icons.build_circle_outlined,
+                        color: scheme.onTertiaryContainer,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Worker requests Rs. ${booking.pendingAdditionalCharge!.toStringAsFixed(0)} for materials',
-                          style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onTertiaryContainer),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onTertiaryContainer,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  if ((booking.pendingAdditionalChargeReason ?? '').isNotEmpty) ...[
+                  if ((booking.pendingAdditionalChargeReason ?? '')
+                      .isNotEmpty) ...[
                     const SizedBox(height: 6),
-                    Text(booking.pendingAdditionalChargeReason!,
-                        style: TextStyle(color: scheme.onTertiaryContainer.withValues(alpha: 0.85))),
+                    Text(
+                      booking.pendingAdditionalChargeReason!,
+                      style: TextStyle(
+                        color: scheme.onTertiaryContainer.withValues(
+                          alpha: 0.85,
+                        ),
+                      ),
+                    ),
                   ],
                   const SizedBox(height: 14),
                   Row(
                     children: [
                       Expanded(
                         child: FilledButton(
-                          onPressed: _busy ? null : () => _respondToCharge(true),
+                          onPressed: _busy
+                              ? null
+                              : () => _respondToCharge(true),
                           child: const Text('Approve'),
                         ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: _busy ? null : () => _respondToCharge(false),
+                          onPressed: _busy
+                              ? null
+                              : () => _respondToCharge(false),
                           child: const Text('Decline'),
                         ),
                       ),
@@ -498,8 +592,11 @@ class _TrackingScreenState extends State<TrackingScreen> {
               ),
             ),
           ],
-          if (![BookingStatus.serviceStarted, BookingStatus.inProgress, BookingStatus.completionRequested]
-              .contains(booking.status)) ...[
+          if (![
+            BookingStatus.serviceStarted,
+            BookingStatus.inProgress,
+            BookingStatus.completionRequested,
+          ].contains(booking.status)) ...[
             const SizedBox(height: 16),
             Center(
               child: TextButton(
@@ -536,18 +633,30 @@ class DottedOtpCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: scheme.primary.withValues(alpha: 0.25), width: 1.5),
+        border: Border.all(
+          color: scheme.primary.withValues(alpha: 0.25),
+          width: 1.5,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.pin_outlined, size: 16, color: scheme.onSurfaceVariant),
+              Icon(
+                Icons.pin_outlined,
+                size: 16,
+                color: scheme.onSurfaceVariant,
+              ),
               const SizedBox(width: 6),
               Expanded(
-                child: Text('Share this code with the worker to start the service',
-                    style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13)),
+                child: Text(
+                  'Share this code with the worker to start the service',
+                  style: TextStyle(
+                    color: scheme.onSurfaceVariant,
+                    fontSize: 13,
+                  ),
+                ),
               ),
             ],
           ),
@@ -587,7 +696,10 @@ class _InfoChip extends StatelessWidget {
         children: [
           Icon(icon, size: 15, color: scheme.onSurfaceVariant),
           const SizedBox(width: 6),
-          Text(label, style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+          Text(
+            label,
+            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+          ),
         ],
       ),
     );
@@ -599,7 +711,11 @@ class _WarningBanner extends StatelessWidget {
   final IconData icon;
   final String text;
 
-  const _WarningBanner({required this.color, required this.icon, required this.text});
+  const _WarningBanner({
+    required this.color,
+    required this.icon,
+    required this.text,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -615,7 +731,10 @@ class _WarningBanner extends StatelessWidget {
           Icon(icon, color: color, size: 20),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+            child: Text(
+              text,
+              style: TextStyle(color: color, fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),

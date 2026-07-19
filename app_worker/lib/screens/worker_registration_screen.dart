@@ -21,7 +21,8 @@ class WorkerRegistrationScreen extends StatefulWidget {
   });
 
   @override
-  State<WorkerRegistrationScreen> createState() => _WorkerRegistrationScreenState();
+  State<WorkerRegistrationScreen> createState() =>
+      _WorkerRegistrationScreenState();
 }
 
 class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
@@ -83,8 +84,13 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
     }
   }
 
-  Future<String?> _pickAndUpload({ImageSource source = ImageSource.gallery}) async {
-    final picked = await ImagePicker().pickImage(source: source, imageQuality: 85);
+  Future<String?> _pickAndUpload({
+    ImageSource source = ImageSource.gallery,
+  }) async {
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      imageQuality: 85,
+    );
     if (picked == null) return null;
     final bytes = await picked.readAsBytes();
     return AppServices.media.uploadImage(bytes: bytes, filename: picked.name);
@@ -105,7 +111,9 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
       double lng = 0;
       try {
         final position = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+          ),
         );
         lat = position.latitude;
         lng = position.longitude;
@@ -135,7 +143,9 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
 
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const UnderReviewScreen(status: 'under_review')),
+        MaterialPageRoute(
+          builder: (_) => const UnderReviewScreen(status: 'under_review'),
+        ),
         (route) => false,
       );
     } catch (e) {
@@ -166,21 +176,29 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Full name', prefixIcon: Icon(Icons.badge_outlined)),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+                decoration: const InputDecoration(
+                  labelText: 'Full name',
+                  prefixIcon: Icon(Icons.badge_outlined),
+                ),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Name is required' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _phoneController,
                 decoration: const InputDecoration(
-                    labelText: 'Phone (e.g. +923001234567)', prefixIcon: Icon(Icons.phone_outlined)),
+                  labelText: 'Phone (e.g. +923001234567)',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                ),
                 keyboardType: TextInputType.phone,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _experienceController,
                 decoration: const InputDecoration(
-                    labelText: 'Years of experience', prefixIcon: Icon(Icons.work_history_outlined)),
+                  labelText: 'Years of experience',
+                  prefixIcon: Icon(Icons.work_history_outlined),
+                ),
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 20),
@@ -204,7 +222,9 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
                         label: Text(c.name),
                         selected: selected,
                         onSelected: (v) => setState(() {
-                          v ? _selectedSkills.add(c.name) : _selectedSkills.remove(c.name);
+                          v
+                              ? _selectedSkills.add(c.name)
+                              : _selectedSkills.remove(c.name);
                         }),
                       );
                     }).toList(),
@@ -212,44 +232,89 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
                 },
               ),
               const SizedBox(height: 24),
-              Text('Verification documents', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Verification documents',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(18)),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(18),
+                ),
                 child: Column(
                   children: [
                     OutlinedButton.icon(
                       onPressed: _uploadingCnicFront ? null : _captureCnicFront,
                       icon: _uploadingCnicFront
-                          ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                          : Icon(_cnicFrontId != null ? Icons.check_circle : Icons.badge_outlined,
-                              color: _cnicFrontId != null ? Colors.green : null),
-                      label: Text(_cnicFrontId != null ? 'CNIC front captured' : 'Capture CNIC front'),
+                          ? const SizedBox(
+                              height: 16,
+                              width: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              _cnicFrontId != null
+                                  ? Icons.check_circle
+                                  : Icons.badge_outlined,
+                              color: _cnicFrontId != null ? Colors.green : null,
+                            ),
+                      label: Text(
+                        _cnicFrontId != null
+                            ? 'CNIC front captured'
+                            : 'Capture CNIC front',
+                      ),
                     ),
                     const SizedBox(height: 8),
                     OutlinedButton.icon(
                       onPressed: _uploadingCnicBack ? null : _captureCnicBack,
                       icon: _uploadingCnicBack
-                          ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                          : Icon(_cnicBackId != null ? Icons.check_circle : Icons.badge_outlined,
-                              color: _cnicBackId != null ? Colors.green : null),
-                      label: Text(_cnicBackId != null ? 'CNIC back captured' : 'Capture CNIC back'),
+                          ? const SizedBox(
+                              height: 16,
+                              width: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              _cnicBackId != null
+                                  ? Icons.check_circle
+                                  : Icons.badge_outlined,
+                              color: _cnicBackId != null ? Colors.green : null,
+                            ),
+                      label: Text(
+                        _cnicBackId != null
+                            ? 'CNIC back captured'
+                            : 'Capture CNIC back',
+                      ),
                     ),
                     const SizedBox(height: 8),
                     OutlinedButton.icon(
                       onPressed: _uploadingSelfie ? null : _captureSelfie,
                       icon: _uploadingSelfie
-                          ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                          : Icon(_selfieId != null ? Icons.check_circle : Icons.face_outlined,
-                              color: _selfieId != null ? Colors.green : null),
-                      label: Text(_selfieId != null ? 'Selfie captured' : 'Capture selfie'),
+                          ? const SizedBox(
+                              height: 16,
+                              width: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              _selfieId != null
+                                  ? Icons.check_circle
+                                  : Icons.face_outlined,
+                              color: _selfieId != null ? Colors.green : null,
+                            ),
+                      label: Text(
+                        _selfieId != null
+                            ? 'Selfie captured'
+                            : 'Capture selfie',
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Text(
                       'Documents help an admin verify your identity faster, but aren\'t required to '
                       'submit — verification stays "under review" until an admin approves regardless.',
-                      style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -263,7 +328,13 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
                 onPressed: _saving ? null : _save,
                 icon: _saving
                     ? const SizedBox(
-                        height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
                     : const Icon(Icons.send_outlined),
                 label: const Text('Submit for review'),
               ),

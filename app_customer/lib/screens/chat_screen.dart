@@ -48,7 +48,8 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         final i = _messages.indexWhere((m) => m.id == message.id);
         if (i != -1) {
-          _messages[i] = message; // translation/flag update arriving after the create event
+          _messages[i] =
+              message; // translation/flag update arriving after the create event
         } else {
           _messages.add(message);
         }
@@ -99,7 +100,11 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: Text(widget.threadWorkerId != null ? 'Question from a worker' : 'Chat')),
+      appBar: AppBar(
+        title: Text(
+          widget.threadWorkerId != null ? 'Question from a worker' : 'Chat',
+        ),
+      ),
       body: Column(
         children: [
           Expanded(
@@ -112,17 +117,22 @@ class _ChatScreenState extends State<ChatScreen> {
                       final m = _messages[i];
                       final isMine = m.senderId == widget.senderId;
                       return Align(
-                        alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+                        alignment: isMine
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
                         child: Container(
                           margin: const EdgeInsets.symmetric(vertical: 4),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
                           constraints: const BoxConstraints(maxWidth: 320),
                           decoration: BoxDecoration(
                             color: m.aiFlagged
                                 ? Colors.red.withValues(alpha: 0.15)
                                 : isMine
-                                    ? scheme.primaryContainer
-                                    : scheme.surfaceContainerHighest,
+                                ? scheme.primaryContainer
+                                : scheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.only(
                               topLeft: const Radius.circular(16),
                               topRight: const Radius.circular(16),
@@ -133,12 +143,27 @@ class _ChatScreenState extends State<ChatScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(m.text, style: TextStyle(color: isMine ? scheme.onPrimaryContainer : scheme.onSurfaceVariant)),
-                              if (!isMine && m.translatedText != null && m.translatedText != m.text) ...[
+                              Text(
+                                m.text,
+                                style: TextStyle(
+                                  color: isMine
+                                      ? scheme.onPrimaryContainer
+                                      : scheme.onSurfaceVariant,
+                                ),
+                              ),
+                              if (!isMine &&
+                                  m.translatedText != null &&
+                                  m.translatedText != m.text) ...[
                                 const SizedBox(height: 4),
                                 Text(
                                   m.translatedText!,
-                                  style: TextStyle(fontStyle: FontStyle.italic, fontSize: 12, color: scheme.onSurfaceVariant.withValues(alpha: 0.8)),
+                                  style: TextStyle(
+                                    fontStyle: FontStyle.italic,
+                                    fontSize: 12,
+                                    color: scheme.onSurfaceVariant.withValues(
+                                      alpha: 0.8,
+                                    ),
+                                  ),
                                 ),
                               ],
                               if (m.aiFlagged) ...[
@@ -146,11 +171,19 @@ class _ChatScreenState extends State<ChatScreen> {
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.warning_amber_rounded, size: 13, color: Colors.red),
+                                    const Icon(
+                                      Icons.warning_amber_rounded,
+                                      size: 13,
+                                      color: Colors.red,
+                                    ),
                                     const SizedBox(width: 3),
                                     Text(
                                       m.flagReason ?? 'flagged for review',
-                                      style: const TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.w600),
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -166,7 +199,11 @@ class _ChatScreenState extends State<ChatScreen> {
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
             decoration: BoxDecoration(
               color: scheme.surface,
-              border: Border(top: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.4))),
+              border: Border(
+                top: BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: 0.4),
+                ),
+              ),
             ),
             child: SafeArea(
               top: false,
@@ -175,14 +212,24 @@ class _ChatScreenState extends State<ChatScreen> {
                   Expanded(
                     child: TextField(
                       controller: _textController,
-                      decoration: const InputDecoration(hintText: 'Message... (never share payment details here)'),
+                      decoration: const InputDecoration(
+                        hintText:
+                            'Message... (never share payment details here)',
+                      ),
                       onSubmitted: (_) => _send(),
                     ),
                   ),
                   const SizedBox(width: 8),
                   IconButton.filled(
                     icon: _sending
-                        ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
                         : const Icon(Icons.arrow_upward),
                     onPressed: _sending ? null : _send,
                   ),

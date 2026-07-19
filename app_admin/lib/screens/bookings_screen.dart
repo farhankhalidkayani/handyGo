@@ -202,10 +202,14 @@ class _BookingsBodyState extends State<BookingsBody> {
         Query.limit(50),
       ],
     );
-    final candidates = workersRes.documents.map((d) => WorkerProfile.fromMap({...d.data, '\$id': d.$id})).toList();
+    final candidates = workersRes.documents
+        .map((d) => WorkerProfile.fromMap({...d.data, '\$id': d.$id}))
+        .toList();
     if (!mounted) return;
     if (candidates.isEmpty) {
-      setState(() => _error = 'No other approved workers available to reassign to');
+      setState(
+        () => _error = 'No other approved workers available to reassign to',
+      );
       return;
     }
     final chosen = await showDialog<WorkerProfile>(
@@ -213,10 +217,14 @@ class _BookingsBodyState extends State<BookingsBody> {
       builder: (context) => SimpleDialog(
         title: const Text('Reassign to which worker?'),
         children: candidates
-            .map((w) => SimpleDialogOption(
-                  onPressed: () => Navigator.of(context).pop(w),
-                  child: Text('${w.skills.join(', ')} · rating ${w.rating.toStringAsFixed(1)}'),
-                ))
+            .map(
+              (w) => SimpleDialogOption(
+                onPressed: () => Navigator.of(context).pop(w),
+                child: Text(
+                  '${w.skills.join(', ')} · rating ${w.rating.toStringAsFixed(1)}',
+                ),
+              ),
+            )
             .toList(),
       ),
     );
@@ -228,9 +236,13 @@ class _BookingsBodyState extends State<BookingsBody> {
         title: const Text('Reason for reassigning'),
         content: TextField(controller: reasonController, autofocus: true),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
-            onPressed: () => Navigator.of(context).pop(reasonController.text.trim()),
+            onPressed: () =>
+                Navigator.of(context).pop(reasonController.text.trim()),
             child: const Text('Reassign'),
           ),
         ],
@@ -239,9 +251,15 @@ class _BookingsBodyState extends State<BookingsBody> {
     if (reason == null) return;
     setState(() => _error = null);
     try {
-      await AppServices.reassignWorker(bookingId: b.id, newWorkerId: chosen.userId, reason: reason);
+      await AppServices.reassignWorker(
+        bookingId: b.id,
+        newWorkerId: chosen.userId,
+        reason: reason,
+      );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking reassigned.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Booking reassigned.')));
     } catch (e) {
       setState(() => _error = 'Reassign failed: $e');
     }
@@ -261,9 +279,13 @@ class _BookingsBodyState extends State<BookingsBody> {
           autofocus: true,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
-            onPressed: () => Navigator.of(context).pop(reasonController.text.trim()),
+            onPressed: () =>
+                Navigator.of(context).pop(reasonController.text.trim()),
             child: const Text('Apply'),
           ),
         ],
@@ -272,9 +294,15 @@ class _BookingsBodyState extends State<BookingsBody> {
     if (reason == null || reason.isEmpty) return;
     setState(() => _error = null);
     try {
-      await AppServices.applyPenalty(bookingId: b.id, userId: userId, reason: reason);
+      await AppServices.applyPenalty(
+        bookingId: b.id,
+        userId: userId,
+        reason: reason,
+      );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Penalty applied.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Penalty applied.')));
     } catch (e) {
       setState(() => _error = 'Penalty failed: $e');
     }
@@ -295,9 +323,16 @@ class _BookingsBodyState extends State<BookingsBody> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.list_alt_outlined, size: 40, color: scheme.onSurfaceVariant),
+            Icon(
+              Icons.list_alt_outlined,
+              size: 40,
+              color: scheme.onSurfaceVariant,
+            ),
             const SizedBox(height: 10),
-            Text('No bookings yet.', style: TextStyle(color: scheme.onSurfaceVariant)),
+            Text(
+              'No bookings yet.',
+              style: TextStyle(color: scheme.onSurfaceVariant),
+            ),
           ],
         ),
       );
@@ -310,120 +345,152 @@ class _BookingsBodyState extends State<BookingsBody> {
             child: Text(_error!, style: TextStyle(color: scheme.error)),
           ),
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: _bookings.length,
-            itemBuilder: (context, i) {
-              final b = _bookings[i];
-              final statusColor = _statusColor(b.status);
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: scheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: () => _showDetail(b),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(b.problemText, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                        const SizedBox(height: 4),
-                        Text(b.addressText, style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13)),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: statusColor.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                b.status.wire,
-                                style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w700),
-                              ),
+          child: RefreshIndicator(
+            onRefresh: _load,
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _bookings.length,
+              itemBuilder: (context, i) {
+                final b = _bookings[i];
+                final statusColor = _statusColor(b.status);
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () => _showDetail(b),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            b.problemText,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
                             ),
-                            if (b.finalQuote != null) ...[
-                              const SizedBox(width: 8),
-                              Text('Rs. ${b.finalQuote!.toStringAsFixed(0)}',
-                                  style: const TextStyle(fontWeight: FontWeight.w700)),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            b.addressText,
+                            style: TextStyle(
+                              color: scheme.onSurfaceVariant,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  b.status.wire,
+                                  style: TextStyle(
+                                    color: statusColor,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              if (b.finalQuote != null) ...[
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Rs. ${b.finalQuote!.toStringAsFixed(0)}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            if (b.status == BookingStatus.disputed) ...[
-                              FilledButton(
-                                onPressed: () => _transition(
-                                  b,
-                                  BookingStatus.refunded,
-                                  confirmMessage: 'Refund this booking?',
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              if (b.status == BookingStatus.disputed) ...[
+                                FilledButton(
+                                  onPressed: () => _transition(
+                                    b,
+                                    BookingStatus.refunded,
+                                    confirmMessage: 'Refund this booking?',
+                                  ),
+                                  child: const Text('Refund'),
                                 ),
-                                child: const Text('Refund'),
-                              ),
-                              OutlinedButton(
-                                onPressed: () => _transition(
-                                  b,
-                                  BookingStatus.completed,
-                                  confirmMessage: 'Mark completed (no refund)?',
+                                OutlinedButton(
+                                  onPressed: () => _transition(
+                                    b,
+                                    BookingStatus.completed,
+                                    confirmMessage:
+                                        'Mark completed (no refund)?',
+                                  ),
+                                  child: const Text('Mark completed'),
                                 ),
-                                child: const Text('Mark completed'),
+                              ] else if (!_terminalStatuses.contains(b.status))
+                                OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.orange,
+                                  ),
+                                  onPressed: () => _transition(
+                                    b,
+                                    BookingStatus.disputed,
+                                    confirmMessage:
+                                        'Raise a dispute on this booking?',
+                                  ),
+                                  child: const Text('Raise dispute'),
+                                ),
+                              OutlinedButton.icon(
+                                onPressed: () => _contact(b.customerId),
+                                icon: const Icon(Icons.call, size: 16),
+                                label: const Text('Call customer'),
                               ),
-                            ] else if (!_terminalStatuses.contains(b.status))
+                              if (b.workerId != null) ...[
+                                OutlinedButton.icon(
+                                  onPressed: () => _contact(b.workerId!),
+                                  icon: const Icon(Icons.call, size: 16),
+                                  label: const Text('Call worker'),
+                                ),
+                                if (!_terminalStatuses.contains(b.status) &&
+                                    b.status != BookingStatus.disputed)
+                                  OutlinedButton(
+                                    onPressed: () => _reassign(b),
+                                    child: const Text('Reassign worker'),
+                                  ),
+                                OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.deepOrange,
+                                  ),
+                                  onPressed: () => _penalize(b, worker: true),
+                                  child: const Text('Penalize worker'),
+                                ),
+                              ],
                               OutlinedButton(
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.orange,
+                                  foregroundColor: Colors.deepOrange,
                                 ),
-                                onPressed: () => _transition(
-                                  b,
-                                  BookingStatus.disputed,
-                                  confirmMessage:
-                                      'Raise a dispute on this booking?',
-                                ),
-                                child: const Text('Raise dispute'),
-                              ),
-                            OutlinedButton.icon(
-                              onPressed: () => _contact(b.customerId),
-                              icon: const Icon(Icons.call, size: 16),
-                              label: const Text('Call customer'),
-                            ),
-                            if (b.workerId != null) ...[
-                              OutlinedButton.icon(
-                                onPressed: () => _contact(b.workerId!),
-                                icon: const Icon(Icons.call, size: 16),
-                                label: const Text('Call worker'),
-                              ),
-                              if (!_terminalStatuses.contains(b.status) && b.status != BookingStatus.disputed)
-                                OutlinedButton(
-                                  onPressed: () => _reassign(b),
-                                  child: const Text('Reassign worker'),
-                                ),
-                              OutlinedButton(
-                                style: OutlinedButton.styleFrom(foregroundColor: Colors.deepOrange),
-                                onPressed: () => _penalize(b, worker: true),
-                                child: const Text('Penalize worker'),
+                                onPressed: () => _penalize(b, worker: false),
+                                child: const Text('Penalize customer'),
                               ),
                             ],
-                            OutlinedButton(
-                              style: OutlinedButton.styleFrom(foregroundColor: Colors.deepOrange),
-                              onPressed: () => _penalize(b, worker: false),
-                              child: const Text('Penalize customer'),
-                            ),
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ],

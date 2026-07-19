@@ -38,9 +38,17 @@ class _AiChatScreenState extends State<AiChatScreen> {
     });
     try {
       final result = await AppServices.bookings.getAiChatReply(message: text);
-      setState(() => _messages.add(_ChatMessage(result['reply'] as String? ?? '...', false)));
+      setState(
+        () => _messages.add(
+          _ChatMessage(result['reply'] as String? ?? '...', false),
+        ),
+      );
     } catch (e) {
-      setState(() => _messages.add(_ChatMessage('Sorry, something went wrong: $e', false)));
+      setState(
+        () => _messages.add(
+          _ChatMessage('Sorry, something went wrong: $e', false),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -61,7 +69,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
         actions: [
           TextButton.icon(
             onPressed: () => Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => AiIntakeScreen(profile: widget.profile)),
+              MaterialPageRoute(
+                builder: (_) => AiIntakeScreen(profile: widget.profile),
+              ),
             ),
             icon: const Icon(Icons.auto_awesome, size: 16),
             label: const Text('Book Service'),
@@ -79,11 +89,21 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(color: scheme.primaryContainer, shape: BoxShape.circle),
-                          child: Icon(Icons.smart_toy_outlined, size: 32, color: scheme.onPrimaryContainer),
+                          decoration: BoxDecoration(
+                            color: scheme.primaryContainer,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.smart_toy_outlined,
+                            size: 32,
+                            color: scheme.onPrimaryContainer,
+                          ),
                         ),
                         const SizedBox(height: 12),
-                        Text('Ask me anything about your problem', style: TextStyle(color: scheme.onSurfaceVariant)),
+                        Text(
+                          'Ask me anything about your problem',
+                          style: TextStyle(color: scheme.onSurfaceVariant),
+                        ),
                       ],
                     ),
                   )
@@ -93,13 +113,20 @@ class _AiChatScreenState extends State<AiChatScreen> {
                     itemBuilder: (context, i) {
                       final m = _messages[i];
                       return Align(
-                        alignment: m.fromUser ? Alignment.centerRight : Alignment.centerLeft,
+                        alignment: m.fromUser
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
                         child: Container(
                           margin: const EdgeInsets.symmetric(vertical: 4),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
                           constraints: const BoxConstraints(maxWidth: 320),
                           decoration: BoxDecoration(
-                            color: m.fromUser ? scheme.primaryContainer : scheme.surfaceContainerHighest,
+                            color: m.fromUser
+                                ? scheme.primaryContainer
+                                : scheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.only(
                               topLeft: const Radius.circular(16),
                               topRight: const Radius.circular(16),
@@ -107,9 +134,14 @@ class _AiChatScreenState extends State<AiChatScreen> {
                               bottomRight: Radius.circular(m.fromUser ? 4 : 16),
                             ),
                           ),
-                          child: Text(m.text,
-                              style: TextStyle(
-                                  color: m.fromUser ? scheme.onPrimaryContainer : scheme.onSurfaceVariant)),
+                          child: Text(
+                            m.text,
+                            style: TextStyle(
+                              color: m.fromUser
+                                  ? scheme.onPrimaryContainer
+                                  : scheme.onSurfaceVariant,
+                            ),
+                          ),
                         ),
                       );
                     },
@@ -120,14 +152,21 @@ class _AiChatScreenState extends State<AiChatScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(minHeight: 3, color: scheme.primary),
+                child: LinearProgressIndicator(
+                  minHeight: 3,
+                  color: scheme.primary,
+                ),
               ),
             ),
           Container(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
             decoration: BoxDecoration(
               color: scheme.surface,
-              border: Border(top: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.4))),
+              border: Border(
+                top: BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: 0.4),
+                ),
+              ),
             ),
             child: SafeArea(
               top: false,
@@ -136,14 +175,23 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   Expanded(
                     child: TextField(
                       controller: _messageController,
-                      decoration: const InputDecoration(hintText: 'Type a message...'),
+                      decoration: const InputDecoration(
+                        hintText: 'Type a message...',
+                      ),
                       onSubmitted: (_) => _send(),
                     ),
                   ),
                   const SizedBox(width: 8),
                   IconButton.filled(
                     icon: _sending
-                        ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
                         : const Icon(Icons.arrow_upward),
                     onPressed: _sending ? null : _send,
                   ),

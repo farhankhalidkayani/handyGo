@@ -8,7 +8,10 @@ class LocationPermissionScreen extends StatelessWidget {
 
   const LocationPermissionScreen({super.key, required this.language});
 
-  Future<void> _continue(BuildContext context, {required bool requestPermission}) async {
+  Future<void> _continue(
+    BuildContext context, {
+    required bool requestPermission,
+  }) async {
     if (requestPermission) {
       final enabled = await Geolocator.isLocationServiceEnabled();
       if (enabled) {

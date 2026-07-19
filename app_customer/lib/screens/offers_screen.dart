@@ -17,7 +17,11 @@ class OffersScreen extends StatefulWidget {
   final UserProfile profile;
   final String bookingId;
 
-  const OffersScreen({super.key, required this.profile, required this.bookingId});
+  const OffersScreen({
+    super.key,
+    required this.profile,
+    required this.bookingId,
+  });
 
   @override
   State<OffersScreen> createState() => _OffersScreenState();
@@ -95,7 +99,9 @@ class _OffersScreenState extends State<OffersScreen> {
   Future<void> _openQuestions() async {
     List<String> workerIds;
     try {
-      workerIds = await AppServices.messages.listPreOfferThreadWorkerIds(widget.bookingId);
+      workerIds = await AppServices.messages.listPreOfferThreadWorkerIds(
+        widget.bookingId,
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = 'Could not load questions: $e');
@@ -114,23 +120,25 @@ class _OffersScreenState extends State<OffersScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: workerIds
-              .map((workerId) => ListTile(
-                    leading: const Icon(Icons.person_outline),
-                    title: const Text('Worker question'),
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => ChatScreen(
-                            bookingId: widget.bookingId,
-                            senderId: widget.profile.id,
-                            senderRole: 'customer',
-                            threadWorkerId: workerId,
-                          ),
+              .map(
+                (workerId) => ListTile(
+                  leading: const Icon(Icons.person_outline),
+                  title: const Text('Worker question'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ChatScreen(
+                          bookingId: widget.bookingId,
+                          senderId: widget.profile.id,
+                          senderRole: 'customer',
+                          threadWorkerId: workerId,
                         ),
-                      );
-                    },
-                  ))
+                      ),
+                    );
+                  },
+                ),
+              )
               .toList(),
         ),
       ),
@@ -181,7 +189,10 @@ class _OffersScreenState extends State<OffersScreen> {
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => TrackingScreen(profile: widget.profile, bookingId: widget.bookingId),
+          builder: (_) => TrackingScreen(
+            profile: widget.profile,
+            bookingId: widget.bookingId,
+          ),
         ),
       );
     } catch (e) {
@@ -206,7 +217,9 @@ class _OffersScreenState extends State<OffersScreen> {
         : sentOffers.reduce((a, b) => a.quote < b.quote ? a : b);
     final fastest = sentOffers.isEmpty
         ? null
-        : sentOffers.reduce((a, b) => (a.etaMins ?? 1 << 30) < (b.etaMins ?? 1 << 30) ? a : b);
+        : sentOffers.reduce(
+            (a, b) => (a.etaMins ?? 1 << 30) < (b.etaMins ?? 1 << 30) ? a : b,
+          );
 
     return Scaffold(
       appBar: AppBar(
@@ -244,11 +257,16 @@ class _OffersScreenState extends State<OffersScreen> {
                           SizedBox(
                             width: 32,
                             height: 32,
-                            child: CircularProgressIndicator(strokeWidth: 2.5, color: scheme.primary),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: scheme.primary,
+                            ),
                           ),
                           const SizedBox(height: 16),
-                          Text('Waiting for workers to send offers...',
-                              style: TextStyle(color: scheme.onSurfaceVariant)),
+                          Text(
+                            'Waiting for workers to send offers...',
+                            style: TextStyle(color: scheme.onSurfaceVariant),
+                          ),
                         ],
                       ),
                     ),
@@ -256,128 +274,196 @@ class _OffersScreenState extends State<OffersScreen> {
                 else
                   Expanded(
                     child: RefreshIndicator(
-                    onRefresh: _load,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                      itemCount: sentOffers.length,
-                      itemBuilder: (context, i) {
-                        final offer = sentOffers[i];
-                        final tags = <(String, IconData)>[
-                          if (offer == bestPrice) ('Best price', Icons.savings_outlined),
-                          if (offer == fastest) ('Fastest', Icons.bolt_outlined),
-                          if (offer.id == _topRatedOfferId) ('Top rated', Icons.star_outline),
-                          if (offer.id == _bestMatchOfferId) ('Best match', Icons.auto_awesome),
-                        ];
-                        final isHighlighted = tags.isNotEmpty;
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            color: scheme.surfaceContainerLow,
-                            border: isHighlighted
-                                ? Border.all(color: scheme.primary.withValues(alpha: 0.5), width: 1.5)
-                                : null,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(18),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Rs. ${offer.quote.toStringAsFixed(0)}',
-                                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24),
+                      onRefresh: _load,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                        itemCount: sentOffers.length,
+                        itemBuilder: (context, i) {
+                          final offer = sentOffers[i];
+                          final tags = <(String, IconData)>[
+                            if (offer == bestPrice)
+                              ('Best price', Icons.savings_outlined),
+                            if (offer == fastest)
+                              ('Fastest', Icons.bolt_outlined),
+                            if (offer.id == _topRatedOfferId)
+                              ('Top rated', Icons.star_outline),
+                            if (offer.id == _bestMatchOfferId)
+                              ('Best match', Icons.auto_awesome),
+                          ];
+                          final isHighlighted = tags.isNotEmpty;
+                          return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(20),
+                                  color: scheme.surfaceContainerLow,
+                                  border: isHighlighted
+                                      ? Border.all(
+                                          color: scheme.primary.withValues(
+                                            alpha: 0.5,
                                           ),
-                                          if (offer.etaMins != null) ...[
-                                            const SizedBox(height: 2),
-                                            Row(
+                                          width: 1.5,
+                                        )
+                                      : null,
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(18),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
-                                                Icon(Icons.schedule, size: 14, color: scheme.onSurfaceVariant),
-                                                const SizedBox(width: 4),
-                                                Text('ETA: ${offer.etaMins} mins',
-                                                    style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13)),
+                                                Text(
+                                                  'Rs. ${offer.quote.toStringAsFixed(0)}',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w800,
+                                                    fontSize: 24,
+                                                  ),
+                                                ),
+                                                if (offer.etaMins != null) ...[
+                                                  const SizedBox(height: 2),
+                                                  Row(
+                                                    children: [
+                                                      Icon(
+                                                        Icons.schedule,
+                                                        size: 14,
+                                                        color: scheme
+                                                            .onSurfaceVariant,
+                                                      ),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        'ETA: ${offer.etaMins} mins',
+                                                        style: TextStyle(
+                                                          color: scheme
+                                                              .onSurfaceVariant,
+                                                          fontSize: 13,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
                                               ],
                                             ),
-                                          ],
+                                          ),
+                                          FilledButton(
+                                            onPressed: _accepting
+                                                ? null
+                                                : () => _accept(offer),
+                                            child: const Text('Accept'),
+                                          ),
                                         ],
                                       ),
-                                    ),
-                                    FilledButton(
-                                      onPressed: _accepting ? null : () => _accept(offer),
-                                      child: const Text('Accept'),
-                                    ),
-                                  ],
-                                ),
-                                if (offer.message != null && offer.message!.isNotEmpty) ...[
-                                  const SizedBox(height: 10),
-                                  Text(offer.message!, style: TextStyle(color: scheme.onSurfaceVariant)),
-                                ],
-                                if (offer.flaggedSuspicious) ...[
-                                  const SizedBox(height: 10),
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: Colors.orange.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Icon(Icons.warning_amber_rounded, color: Colors.orange.shade800, size: 18),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            'This quote looks unusual compared to similar jobs — double-check before accepting.',
-                                            style: TextStyle(color: Colors.orange.shade800, fontSize: 12),
+                                      if (offer.message != null &&
+                                          offer.message!.isNotEmpty) ...[
+                                        const SizedBox(height: 10),
+                                        Text(
+                                          offer.message!,
+                                          style: TextStyle(
+                                            color: scheme.onSurfaceVariant,
                                           ),
                                         ),
                                       ],
-                                    ),
-                                  ),
-                                ],
-                                if (tags.isNotEmpty) ...[
-                                  const SizedBox(height: 12),
-                                  Wrap(
-                                    spacing: 6,
-                                    runSpacing: 6,
-                                    children: tags
-                                        .map((t) => Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                              decoration: BoxDecoration(
-                                                color: scheme.primaryContainer,
-                                                borderRadius: BorderRadius.circular(10),
+                                      if (offer.flaggedSuspicious) ...[
+                                        const SizedBox(height: 10),
+                                        Container(
+                                          padding: const EdgeInsets.all(10),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange.withValues(
+                                              alpha: 0.12,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Icon(
+                                                Icons.warning_amber_rounded,
+                                                color: Colors.orange.shade800,
+                                                size: 18,
                                               ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Icon(t.$2, size: 13, color: scheme.onPrimaryContainer),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    t.$1,
-                                                    style: TextStyle(
-                                                      color: scheme.onPrimaryContainer,
-                                                      fontSize: 11,
-                                                      fontWeight: FontWeight.w700,
-                                                    ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  'This quote looks unusual compared to similar jobs — double-check before accepting.',
+                                                  style: TextStyle(
+                                                    color:
+                                                        Colors.orange.shade800,
+                                                    fontSize: 12,
                                                   ),
-                                                ],
+                                                ),
                                               ),
-                                            ))
-                                        .toList(),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                      if (tags.isNotEmpty) ...[
+                                        const SizedBox(height: 12),
+                                        Wrap(
+                                          spacing: 6,
+                                          runSpacing: 6,
+                                          children: tags
+                                              .map(
+                                                (t) => Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 5,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                        scheme.primaryContainer,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          10,
+                                                        ),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Icon(
+                                                        t.$2,
+                                                        size: 13,
+                                                        color: scheme
+                                                            .onPrimaryContainer,
+                                                      ),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        t.$1,
+                                                        style: TextStyle(
+                                                          color: scheme
+                                                              .onPrimaryContainer,
+                                                          fontSize: 11,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              )
+                                              .toList(),
+                                        ),
+                                      ],
+                                    ],
                                   ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ).animate().fadeIn(duration: 250.ms, delay: (i * 60).ms).slideY(begin: 0.06, end: 0);
-                      },
-                    ),
+                                ),
+                              )
+                              .animate()
+                              .fadeIn(duration: 250.ms, delay: (i * 60).ms)
+                              .slideY(begin: 0.06, end: 0);
+                        },
+                      ),
                     ),
                   ),
               ],

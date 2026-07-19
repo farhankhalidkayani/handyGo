@@ -223,111 +223,118 @@ class _VerificationQueueBodyState extends State<VerificationQueueBody> {
                   ),
                 );
               }
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: pending.length,
-                itemBuilder: (context, i) {
-                  final w = pending[i];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 14),
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 18,
-                              backgroundColor: scheme.primaryContainer,
-                              child: Icon(
-                                Icons.person_outline,
-                                color: scheme.onPrimaryContainer,
-                                size: 18,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
-                                children: w.skills
-                                    .map(
-                                      (s) => Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: scheme.secondaryContainer,
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          s,
-                                          style: TextStyle(
-                                            color: scheme.onSecondaryContainer,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _docThumbnail('CNIC front', w.cnicFrontUrl),
-                            _docThumbnail('CNIC back', w.cnicBackUrl),
-                            _docThumbnail('Selfie', w.selfieUrl),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            FilledButton.icon(
-                              onPressed: () => _decide(w, 'approved'),
-                              icon: const Icon(Icons.check, size: 18),
-                              label: const Text('Approve'),
-                            ),
-                            OutlinedButton.icon(
-                              onPressed: () => _decide(w, 'rejected'),
-                              icon: const Icon(Icons.close, size: 18),
-                              label: const Text('Reject'),
-                            ),
-                            OutlinedButton.icon(
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.orange,
-                              ),
-                              onPressed: () => _decide(w, 'suspended'),
-                              icon: const Icon(
-                                Icons.pause_circle_outline,
-                                size: 18,
-                              ),
-                              label: const Text('Suspend'),
-                            ),
-                            OutlinedButton.icon(
-                              onPressed: () => _requestMoreInfo(w),
-                              icon: const Icon(Icons.help_outline, size: 18),
-                              label: const Text('Request more info'),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
+              return RefreshIndicator(
+                onRefresh: () async {
+                  setState(() => _pendingFuture = _loadPending());
+                  await _pendingFuture;
                 },
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: pending.length,
+                  itemBuilder: (context, i) {
+                    final w = pending[i];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: scheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: scheme.primaryContainer,
+                                child: Icon(
+                                  Icons.person_outline,
+                                  color: scheme.onPrimaryContainer,
+                                  size: 18,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: w.skills
+                                      .map(
+                                        (s) => Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: scheme.secondaryContainer,
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            s,
+                                            style: TextStyle(
+                                              color:
+                                                  scheme.onSecondaryContainer,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _docThumbnail('CNIC front', w.cnicFrontUrl),
+                              _docThumbnail('CNIC back', w.cnicBackUrl),
+                              _docThumbnail('Selfie', w.selfieUrl),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              FilledButton.icon(
+                                onPressed: () => _decide(w, 'approved'),
+                                icon: const Icon(Icons.check, size: 18),
+                                label: const Text('Approve'),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: () => _decide(w, 'rejected'),
+                                icon: const Icon(Icons.close, size: 18),
+                                label: const Text('Reject'),
+                              ),
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.orange,
+                                ),
+                                onPressed: () => _decide(w, 'suspended'),
+                                icon: const Icon(
+                                  Icons.pause_circle_outline,
+                                  size: 18,
+                                ),
+                                label: const Text('Suspend'),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: () => _requestMoreInfo(w),
+                                icon: const Icon(Icons.help_outline, size: 18),
+                                label: const Text('Request more info'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               );
             },
           ),

@@ -58,15 +58,20 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
       return;
     }
     final available = await _speech.initialize(
-      onError: (e) => setState(() => _error = 'Speech recognition error: ${e.errorMsg}'),
+      onError: (e) =>
+          setState(() => _error = 'Speech recognition error: ${e.errorMsg}'),
     );
     if (!available) {
-      setState(() => _error = 'Speech recognition is not available on this device/browser');
+      setState(
+        () => _error =
+            'Speech recognition is not available on this device/browser',
+      );
       return;
     }
     setState(() => _listening = true);
     await _speech.listen(
-      onResult: (result) => setState(() => _problemController.text = result.recognizedWords),
+      onResult: (result) =>
+          setState(() => _problemController.text = result.recognizedWords),
     );
   }
 
@@ -78,9 +83,20 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
       lastDate: DateTime.now().add(const Duration(days: 30)),
     );
     if (date == null || !mounted) return;
-    final time = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
     if (time == null || !mounted) return;
-    setState(() => _scheduledAt = DateTime(date.year, date.month, date.day, time.hour, time.minute));
+    setState(
+      () => _scheduledAt = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      ),
+    );
   }
 
   /// Plan §12/C4: "Service request: manual / AI chatbot / image". Attaching a photo before
@@ -89,10 +105,16 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
   Future<void> _attachPhoto() async {
     setState(() => _uploadingImage = true);
     try {
-      final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 80);
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
       if (picked == null) return;
       final bytes = await picked.readAsBytes();
-      final fileId = await AppServices.media.uploadImage(bytes: bytes, filename: picked.name);
+      final fileId = await AppServices.media.uploadImage(
+        bytes: bytes,
+        filename: picked.name,
+      );
       setState(() => _uploadedImageIds.add(fileId));
     } catch (e) {
       setState(() => _error = 'Could not attach photo: $e');
@@ -130,7 +152,9 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
       return;
     }
     _voiceNoteBuffer.clear();
-    final stream = await _recorder.startStream(const RecordConfig(encoder: AudioEncoder.wav));
+    final stream = await _recorder.startStream(
+      const RecordConfig(encoder: AudioEncoder.wav),
+    );
     _voiceNoteSub = stream.listen(_voiceNoteBuffer.addAll);
     setState(() {
       _recording = true;
@@ -152,14 +176,18 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
       final categories = await AppServices.categories.listAll();
       final estimate = await AppServices.bookings.getAiIntake(
         problemText: _problemController.text.trim(),
-        imageFileId: _uploadedImageIds.isNotEmpty ? _uploadedImageIds.first : null,
+        imageFileId: _uploadedImageIds.isNotEmpty
+            ? _uploadedImageIds.first
+            : null,
       );
       setState(() {
         _categories = categories;
         _estimate = estimate;
         _selectedCategoryId = estimate['categoryId'] as String?;
         final caption = estimate['imageCaption'] as String?;
-        if (caption != null && caption.isNotEmpty && _problemController.text.trim().isEmpty) {
+        if (caption != null &&
+            caption.isNotEmpty &&
+            _problemController.text.trim().isEmpty) {
           _problemController.text = caption;
         }
       });
@@ -182,7 +210,9 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
       double lng = 0;
       try {
         final position = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+          ),
         );
         lat = position.latitude;
         lng = position.longitude;
@@ -212,7 +242,10 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => OffersScreen(profile: widget.profile, bookingId: booking.id)),
+        MaterialPageRoute(
+          builder: (_) =>
+              OffersScreen(profile: widget.profile, bookingId: booking.id),
+        ),
       );
     } catch (e) {
       setState(() => _error = 'Could not create booking: $e');
@@ -240,7 +273,9 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
         padding: const EdgeInsets.all(24),
         child: ListView(
           children: [
-            const Text('Describe it in your own words — Urdu, English, or Roman Urdu all work.'),
+            const Text(
+              'Describe it in your own words — Urdu, English, or Roman Urdu all work.',
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: _problemController,
@@ -248,9 +283,13 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
                 labelText: 'e.g. "AC se pani tapak raha hai"',
                 suffixIcon: estimate == null
                     ? IconButton(
-                        icon: Icon(_listening ? Icons.mic : Icons.mic_none,
-                            color: _listening ? Colors.red : null),
-                        tooltip: _listening ? 'Stop dictation' : 'Speak instead of typing',
+                        icon: Icon(
+                          _listening ? Icons.mic : Icons.mic_none,
+                          color: _listening ? Colors.red : null,
+                        ),
+                        tooltip: _listening
+                            ? 'Stop dictation'
+                            : 'Speak instead of typing',
                         onPressed: _toggleDictation,
                       )
                     : null,
@@ -263,28 +302,44 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
               OutlinedButton.icon(
                 onPressed: _uploadingImage ? null : _attachPhoto,
                 icon: _uploadingImage
-                    ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Icon(Icons.add_a_photo_outlined),
-                label: Text(_uploadedImageIds.isEmpty
-                    ? 'Attach a photo (AI will look at it too)'
-                    : '${_uploadedImageIds.length} photo(s) attached — add another'),
+                label: Text(
+                  _uploadedImageIds.isEmpty
+                      ? 'Attach a photo (AI will look at it too)'
+                      : '${_uploadedImageIds.length} photo(s) attached — add another',
+                ),
               ),
               const SizedBox(height: 16),
               if (_error != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
-                  child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                  child: Text(
+                    _error!,
+                    style: const TextStyle(color: Colors.red),
+                  ),
                 ),
               FilledButton(
                 onPressed: _loadingEstimate ? null : _getEstimate,
                 child: _loadingEstimate
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator())
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(),
+                      )
                     : const Text('Get AI estimate'),
               ),
               const SizedBox(height: 8),
               TextButton(
                 onPressed: () => Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => ServiceRequestScreen(profile: widget.profile)),
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        ServiceRequestScreen(profile: widget.profile),
+                  ),
                 ),
                 child: const Text('Pick a category manually instead'),
               ),
@@ -295,22 +350,40 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('AI estimate', style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        'AI estimate',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
                         initialValue: _selectedCategoryId,
-                        decoration: const InputDecoration(labelText: 'Category'),
+                        decoration: const InputDecoration(
+                          labelText: 'Category',
+                        ),
                         items: _categories
-                            .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
+                            .map(
+                              (c) => DropdownMenuItem(
+                                value: c.id,
+                                child: Text(c.name),
+                              ),
+                            )
                             .toList(),
-                        onChanged: (v) => setState(() => _selectedCategoryId = v),
+                        onChanged: (v) =>
+                            setState(() => _selectedCategoryId = v),
                       ),
                       const SizedBox(height: 8),
-                      Text('Estimated price: Rs. ${estimate['min']}–${estimate['max']}'),
-                      Text('Estimated duration: ${estimate['durationMins']} mins'),
+                      Text(
+                        'Estimated price: Rs. ${estimate['min']}–${estimate['max']}',
+                      ),
+                      Text(
+                        'Estimated duration: ${estimate['durationMins']} mins',
+                      ),
                       Text('Urgency: ${estimate['urgency']}'),
-                      Text('Confidence: ${(((estimate['confidence'] as num?)?.toDouble() ?? 0) * 100).toStringAsFixed(0)}%'),
-                      if ((estimate['solution'] as String?)?.isNotEmpty ?? false) ...[
+                      Text(
+                        'Confidence: ${(((estimate['confidence'] as num?)?.toDouble() ?? 0) * 100).toStringAsFixed(0)}%',
+                      ),
+                      if ((estimate['solution'] as String?)?.isNotEmpty ??
+                          false) ...[
                         const SizedBox(height: 8),
                         Text(estimate['solution'] as String),
                       ],
@@ -322,23 +395,39 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
               OutlinedButton.icon(
                 onPressed: _uploadingImage ? null : _attachPhoto,
                 icon: _uploadingImage
-                    ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Icon(Icons.add_a_photo_outlined),
-                label: Text(_uploadedImageIds.isEmpty
-                    ? 'Attach a photo'
-                    : '${_uploadedImageIds.length} photo(s) attached — add another'),
+                label: Text(
+                  _uploadedImageIds.isEmpty
+                      ? 'Attach a photo'
+                      : '${_uploadedImageIds.length} photo(s) attached — add another',
+                ),
               ),
               const SizedBox(height: 8),
               OutlinedButton.icon(
                 onPressed: _uploadingVoiceNote ? null : _toggleRecording,
                 icon: _uploadingVoiceNote
-                    ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                    : Icon(_recording ? Icons.stop_circle_outlined : Icons.mic_none),
-                label: Text(_recording
-                    ? 'Stop recording'
-                    : _voiceNoteId != null
-                        ? 'Voice note attached — tap to re-record'
-                        : 'Record a voice note'),
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        _recording
+                            ? Icons.stop_circle_outlined
+                            : Icons.mic_none,
+                      ),
+                label: Text(
+                  _recording
+                      ? 'Stop recording'
+                      : _voiceNoteId != null
+                      ? 'Voice note attached — tap to re-record'
+                      : 'Record a voice note',
+                ),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -349,9 +438,13 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
               OutlinedButton.icon(
                 onPressed: _pickSchedule,
                 icon: const Icon(Icons.schedule_outlined),
-                label: Text(_scheduledAt == null
-                    ? 'Book now (tap to schedule for later instead)'
-                    : 'Scheduled: ${_scheduledAt!.toLocal()}'.split('.').first),
+                label: Text(
+                  _scheduledAt == null
+                      ? 'Book now (tap to schedule for later instead)'
+                      : 'Scheduled: ${_scheduledAt!.toLocal()}'
+                            .split('.')
+                            .first,
+                ),
               ),
               if (_scheduledAt != null)
                 TextButton(
@@ -359,15 +452,22 @@ class _AiIntakeScreenState extends State<AiIntakeScreen> {
                   child: const Text('Cancel scheduling — book now instead'),
                 ),
               const SizedBox(height: 16),
-              if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
+              if (_error != null)
+                Text(_error!, style: const TextStyle(color: Colors.red)),
               FilledButton(
                 onPressed: _submitting ? null : _bookService,
                 child: _submitting
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator())
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(),
+                      )
                     : const Text('Book service'),
               ),
               TextButton(
-                onPressed: _submitting ? null : () => setState(() => _estimate = null),
+                onPressed: _submitting
+                    ? null
+                    : () => setState(() => _estimate = null),
                 child: const Text('Start over'),
               ),
             ],

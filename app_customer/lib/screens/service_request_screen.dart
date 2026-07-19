@@ -13,7 +13,11 @@ class ServiceRequestScreen extends StatefulWidget {
   final UserProfile profile;
   final String? initialCategoryId;
 
-  const ServiceRequestScreen({super.key, required this.profile, this.initialCategoryId});
+  const ServiceRequestScreen({
+    super.key,
+    required this.profile,
+    this.initialCategoryId,
+  });
 
   @override
   State<ServiceRequestScreen> createState() => _ServiceRequestScreenState();
@@ -44,9 +48,20 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
       lastDate: DateTime.now().add(const Duration(days: 30)),
     );
     if (date == null || !mounted) return;
-    final time = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
     if (time == null || !mounted) return;
-    setState(() => _scheduledAt = DateTime(date.year, date.month, date.day, time.hour, time.minute));
+    setState(
+      () => _scheduledAt = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      ),
+    );
   }
 
   Future<void> _submit() async {
@@ -64,7 +79,9 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
       double lng = 0;
       try {
         final position = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+          ),
         );
         lat = position.latitude;
         lng = position.longitude;
@@ -85,7 +102,10 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => OffersScreen(profile: widget.profile, bookingId: booking.id)),
+        MaterialPageRoute(
+          builder: (_) =>
+              OffersScreen(profile: widget.profile, bookingId: booking.id),
+        ),
       );
     } catch (e) {
       setState(() => _error = 'Could not create booking: $e');
@@ -123,9 +143,17 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
                   }
                   return DropdownButtonFormField<String>(
                     initialValue: _selectedCategoryId,
-                    decoration: const InputDecoration(labelText: 'Category', prefixIcon: Icon(Icons.category_outlined)),
+                    decoration: const InputDecoration(
+                      labelText: 'Category',
+                      prefixIcon: Icon(Icons.category_outlined),
+                    ),
                     items: snapshot.data!
-                        .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
+                        .map(
+                          (c) => DropdownMenuItem(
+                            value: c.id,
+                            child: Text(c.name),
+                          ),
+                        )
                         .toList(),
                     onChanged: (v) => setState(() => _selectedCategoryId = v),
                   );
@@ -134,23 +162,36 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _problemController,
-                decoration: const InputDecoration(labelText: 'Describe the problem'),
+                decoration: const InputDecoration(
+                  labelText: 'Describe the problem',
+                ),
                 maxLines: 3,
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Description is required' : null,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Description is required'
+                    : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _addressController,
-                decoration: const InputDecoration(labelText: 'Address', prefixIcon: Icon(Icons.location_on_outlined)),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Address is required' : null,
+                decoration: const InputDecoration(
+                  labelText: 'Address',
+                  prefixIcon: Icon(Icons.location_on_outlined),
+                ),
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Address is required'
+                    : null,
               ),
               const SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: _pickSchedule,
                 icon: const Icon(Icons.schedule_outlined),
-                label: Text(_scheduledAt == null
-                    ? 'Book now (tap to schedule for later instead)'
-                    : 'Scheduled: ${_scheduledAt!.toLocal()}'.split('.').first),
+                label: Text(
+                  _scheduledAt == null
+                      ? 'Book now (tap to schedule for later instead)'
+                      : 'Scheduled: ${_scheduledAt!.toLocal()}'
+                            .split('.')
+                            .first,
+                ),
               ),
               if (_scheduledAt != null)
                 Center(
@@ -168,7 +209,13 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
                 onPressed: _submitting ? null : _submit,
                 icon: _submitting
                     ? const SizedBox(
-                        height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
                     : const Icon(Icons.search),
                 label: const Text('Find workers'),
               ),

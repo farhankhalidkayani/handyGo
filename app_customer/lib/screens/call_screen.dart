@@ -22,6 +22,7 @@ class CallScreen extends StatefulWidget {
   final String myUserId;
   final String myRole; // 'customer' | 'worker'
   final String peerUserId;
+
   /// Non-null when answering an incoming call (skips creating a new offer).
   final Call? incomingCall;
 
@@ -64,10 +65,14 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> _start() async {
     try {
       _localStream = await navigator.mediaDevices
-          .getUserMedia({'audio': true, 'video': false}).timeout(const Duration(seconds: 15));
+          .getUserMedia({'audio': true, 'video': false})
+          .timeout(const Duration(seconds: 15));
     } catch (e) {
       if (!mounted) return;
-      setState(() => _status = 'Could not access the microphone — check permissions and try again');
+      setState(
+        () => _status =
+            'Could not access the microphone — check permissions and try again',
+      );
       return;
     }
 
@@ -96,8 +101,12 @@ class _CallScreenState extends State<CallScreen> {
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
         setState(() => _status = 'Connected');
       } else if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed) {
-        setState(() => _status = 'Connection failed — the other side may be on a restrictive network');
-      } else if (state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected) {
+        setState(
+          () => _status =
+              'Connection failed — the other side may be on a restrictive network',
+        );
+      } else if (state ==
+          RTCPeerConnectionState.RTCPeerConnectionStateDisconnected) {
         setState(() => _status = 'Disconnected');
       }
     };
@@ -131,10 +140,15 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _answer(Call call) async {
     final pc = _pc!;
-    await pc.setRemoteDescription(RTCSessionDescription(call.offerSdp, 'offer'));
+    await pc.setRemoteDescription(
+      RTCSessionDescription(call.offerSdp, 'offer'),
+    );
     final answer = await pc.createAnswer({'offerToReceiveAudio': 1});
     await pc.setLocalDescription(answer);
-    await AppServices.calls.answerCall(callId: call.id, answerSdp: answer.sdp ?? '');
+    await AppServices.calls.answerCall(
+      callId: call.id,
+      answerSdp: answer.sdp ?? '',
+    );
     if (!mounted) return;
     setState(() {
       _callId = call.id;
@@ -148,8 +162,12 @@ class _CallScreenState extends State<CallScreen> {
       final payload = event.payload;
       if (payload['\$id'] != _callId) return;
       final call = Call.fromMap(payload);
-      if (call.status == 'accepted' && call.answerSdp != null && _pc?.getRemoteDescription() == null) {
-        await _pc?.setRemoteDescription(RTCSessionDescription(call.answerSdp, 'answer'));
+      if (call.status == 'accepted' &&
+          call.answerSdp != null &&
+          _pc?.getRemoteDescription() == null) {
+        await _pc?.setRemoteDescription(
+          RTCSessionDescription(call.answerSdp, 'answer'),
+        );
       } else if (call.status == 'declined' || call.status == 'ended') {
         _hangUp(notifyRemote: false);
       }
@@ -163,12 +181,15 @@ class _CallScreenState extends State<CallScreen> {
       final key = payload['\$id'] as String;
       if (_appliedCandidateKeys.contains(key)) return;
       _appliedCandidateKeys.add(key);
-      final data = jsonDecode(payload['candidate'] as String) as Map<String, dynamic>;
-      await _pc?.addCandidate(RTCIceCandidate(
-        data['candidate'] as String?,
-        data['sdpMid'] as String?,
-        data['sdpMLineIndex'] as int?,
-      ));
+      final data =
+          jsonDecode(payload['candidate'] as String) as Map<String, dynamic>;
+      await _pc?.addCandidate(
+        RTCIceCandidate(
+          data['candidate'] as String?,
+          data['sdpMid'] as String?,
+          data['sdpMLineIndex'] as int?,
+        ),
+      );
     });
   }
 
@@ -183,7 +204,9 @@ class _CallScreenState extends State<CallScreen> {
     if (_ended) return;
     _ended = true;
     if (notifyRemote && _callId != null) {
-      AppServices.calls.updateStatus(callId: _callId!, status: 'ended').catchError((_) {});
+      AppServices.calls
+          .updateStatus(callId: _callId!, status: 'ended')
+          .catchError((_) {});
     }
     await _callSub?.close();
     await _candidateSub?.close();
@@ -217,14 +240,20 @@ class _CallScreenState extends State<CallScreen> {
               const Spacer(),
               const Icon(Icons.person, size: 96, color: Colors.white54),
               const SizedBox(height: 24),
-              Text(_status, style: const TextStyle(color: Colors.white, fontSize: 18)),
+              Text(
+                _status,
+                style: const TextStyle(color: Colors.white, fontSize: 18),
+              ),
               const Spacer(),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   IconButton(
                     iconSize: 48,
-                    icon: Icon(_muted ? Icons.mic_off : Icons.mic, color: Colors.white),
+                    icon: Icon(
+                      _muted ? Icons.mic_off : Icons.mic,
+                      color: Colors.white,
+                    ),
                     onPressed: _toggleMute,
                   ),
                   const SizedBox(width: 32),

@@ -150,55 +150,58 @@ class _FinanceBodyState extends State<FinanceBody> {
           Expanded(
             child: TabBarView(
               children: [
-                ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: _transactions.length,
-                  itemBuilder: (context, i) {
-                    final t = _transactions[i];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: scheme.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: scheme.primaryContainer,
-                            child: Icon(
-                              Icons.receipt_outlined,
-                              size: 18,
-                              color: scheme.onPrimaryContainer,
+                RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _transactions.length,
+                    itemBuilder: (context, i) {
+                      final t = _transactions[i];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: scheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: scheme.primaryContainer,
+                              child: Icon(
+                                Icons.receipt_outlined,
+                                size: 18,
+                                color: scheme.onPrimaryContainer,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Rs. ${t.total.toStringAsFixed(0)} — ${t.method.toUpperCase()} (${t.status})',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Rs. ${t.total.toStringAsFixed(0)} — ${t.method.toUpperCase()} (${t.status})',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Service: Rs. ${t.serviceCharges.toStringAsFixed(0)} · Materials: Rs. ${t.materialCharges.toStringAsFixed(0)}\n'
-                                  'Commission: Rs. ${t.commission.toStringAsFixed(0)} · Net to worker: Rs. ${t.netToWorker.toStringAsFixed(0)}',
-                                  style: TextStyle(
-                                    color: scheme.onSurfaceVariant,
-                                    fontSize: 12,
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Service: Rs. ${t.serviceCharges.toStringAsFixed(0)} · Materials: Rs. ${t.materialCharges.toStringAsFixed(0)}\n'
+                                    'Commission: Rs. ${t.commission.toStringAsFixed(0)} · Net to worker: Rs. ${t.netToWorker.toStringAsFixed(0)}',
+                                    style: TextStyle(
+                                      color: scheme.onSurfaceVariant,
+                                      fontSize: 12,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ),
                 _withdrawals.isEmpty
                     ? Center(
@@ -207,54 +210,57 @@ class _FinanceBodyState extends State<FinanceBody> {
                           style: TextStyle(color: scheme.onSurfaceVariant),
                         ),
                       )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: _withdrawals.length,
-                        itemBuilder: (context, i) {
-                          final w = _withdrawals[i];
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 10),
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: scheme.surfaceContainerLow,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  backgroundColor: scheme.secondaryContainer,
-                                  child: Icon(
-                                    Icons.arrow_circle_down_outlined,
-                                    size: 18,
-                                    color: scheme.onSecondaryContainer,
+                    : RefreshIndicator(
+                        onRefresh: _load,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(12),
+                          itemCount: _withdrawals.length,
+                          itemBuilder: (context, i) {
+                            final w = _withdrawals[i];
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: scheme.surfaceContainerLow,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: scheme.secondaryContainer,
+                                    child: Icon(
+                                      Icons.arrow_circle_down_outlined,
+                                      size: 18,
+                                      color: scheme.onSecondaryContainer,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Rs. ${w.amount.toStringAsFixed(0)} — ${w.status}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Rs. ${w.amount.toStringAsFixed(0)} — ${w.status}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                         ),
-                                      ),
-                                      Text(
-                                        'Worker: ${w.workerId} · ${w.createdAt.toLocal()}',
-                                        style: TextStyle(
-                                          color: scheme.onSurfaceVariant,
-                                          fontSize: 12,
+                                        Text(
+                                          'Worker: ${w.workerId} · ${w.createdAt.toLocal()}',
+                                          style: TextStyle(
+                                            color: scheme.onSurfaceVariant,
+                                            fontSize: 12,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                       ),
               ],
             ),

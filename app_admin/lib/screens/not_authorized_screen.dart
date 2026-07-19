@@ -27,7 +27,10 @@ class NotAuthorizedScreen extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.12), shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
                 child: const Icon(Icons.block, size: 48, color: Colors.red),
               ),
               const SizedBox(height: 20),

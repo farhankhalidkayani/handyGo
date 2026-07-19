@@ -25,7 +25,9 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     if (authUser == null) {
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AuthScreen()));
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const AuthScreen()));
       return;
     }
 
@@ -33,11 +35,13 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     if (profile != null && profile.role == UserRole.admin) {
-      Navigator.of(context)
-          .pushReplacement(MaterialPageRoute(builder: (_) => const DashboardScreen()));
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+      );
     } else {
-      Navigator.of(context)
-          .pushReplacement(MaterialPageRoute(builder: (_) => const NotAuthorizedScreen()));
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const NotAuthorizedScreen()),
+      );
     }
   }
 
@@ -51,11 +55,21 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(color: scheme.primaryContainer, shape: BoxShape.circle),
-              child: Icon(Icons.admin_panel_settings_outlined, size: 40, color: scheme.onPrimaryContainer),
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.admin_panel_settings_outlined,
+                size: 40,
+                color: scheme.onPrimaryContainer,
+              ),
             ),
             const SizedBox(height: 16),
-            Text('Handy Go — Admin', style: Theme.of(context).textTheme.headlineSmall),
+            Text(
+              'Handy Go — Admin',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
             const SizedBox(height: 24),
             CircularProgressIndicator(color: scheme.primary),
           ],

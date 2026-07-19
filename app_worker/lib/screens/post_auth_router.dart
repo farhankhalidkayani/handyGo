@@ -39,16 +39,23 @@ class _PostAuthRouterState extends State<PostAuthRouter> {
     if (userProfile == null) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => WorkerRegistrationScreen(authId: widget.authId, email: widget.email, language: widget.language),
+          builder: (_) => WorkerRegistrationScreen(
+            authId: widget.authId,
+            email: widget.email,
+            language: widget.language,
+          ),
         ),
       );
       return;
     }
 
-    final workerProfile = await AppServices.profiles.findWorkerProfileByUserId(userProfile.id);
+    final workerProfile = await AppServices.profiles.findWorkerProfileByUserId(
+      userProfile.id,
+    );
     if (!mounted) return;
 
-    if (workerProfile == null || workerProfile.verificationStatus != 'approved') {
+    if (workerProfile == null ||
+        workerProfile.verificationStatus != 'approved') {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => UnderReviewScreen(
@@ -58,7 +65,10 @@ class _PostAuthRouterState extends State<PostAuthRouter> {
       );
     } else {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => DashboardScreen(profile: userProfile, worker: workerProfile)),
+        MaterialPageRoute(
+          builder: (_) =>
+              DashboardScreen(profile: userProfile, worker: workerProfile),
+        ),
       );
     }
   }

@@ -44,7 +44,11 @@ class _OperationsMapBodyState extends State<OperationsMapBody> {
       final booking = Booking.fromMap(event.payload);
       setState(() {
         _activeBookings.removeWhere((b) => b.id == booking.id);
-        if (![BookingStatus.completed, BookingStatus.cancelled, BookingStatus.refunded].contains(booking.status)) {
+        if (![
+          BookingStatus.completed,
+          BookingStatus.cancelled,
+          BookingStatus.refunded,
+        ].contains(booking.status)) {
           _activeBookings.add(booking);
         }
       });
@@ -65,7 +69,13 @@ class _OperationsMapBodyState extends State<OperationsMapBody> {
     if (!mounted) return;
     setState(() {
       _activeBookings = all
-          .where((b) => ![BookingStatus.completed, BookingStatus.cancelled, BookingStatus.refunded].contains(b.status))
+          .where(
+            (b) => ![
+              BookingStatus.completed,
+              BookingStatus.cancelled,
+              BookingStatus.refunded,
+            ].contains(b.status),
+          )
           .toList();
       _sosAlerts = sos;
       _loading = false;
@@ -84,23 +94,31 @@ class _OperationsMapBodyState extends State<OperationsMapBody> {
     if (_loading) return const Center(child: CircularProgressIndicator());
     final bookingMarkers = _activeBookings
         .where((b) => b.lat != 0 || b.lng != 0)
-        .map((b) => Marker(
-              point: latlong.LatLng(b.lat, b.lng),
-              child: Tooltip(
-                message: '${b.problemText}\n${b.status.wire}',
-                child: Icon(Icons.circle, color: _statusColors[b.status] ?? Colors.grey, size: 18),
+        .map(
+          (b) => Marker(
+            point: latlong.LatLng(b.lat, b.lng),
+            child: Tooltip(
+              message: '${b.problemText}\n${b.status.wire}',
+              child: Icon(
+                Icons.circle,
+                color: _statusColors[b.status] ?? Colors.grey,
+                size: 18,
               ),
-            ))
+            ),
+          ),
+        )
         .toList();
     final sosMarkers = _sosAlerts
         .where((a) => a.lat != null && a.lng != null)
-        .map((a) => Marker(
-              point: latlong.LatLng(a.lat!, a.lng!),
-              child: const Tooltip(
-                message: 'SOS alert',
-                child: Icon(Icons.warning, color: Colors.red, size: 26),
-              ),
-            ))
+        .map(
+          (a) => Marker(
+            point: latlong.LatLng(a.lat!, a.lng!),
+            child: const Tooltip(
+              message: 'SOS alert',
+              child: Icon(Icons.warning, color: Colors.red, size: 26),
+            ),
+          ),
+        )
         .toList();
 
     final scheme = Theme.of(context).colorScheme;
@@ -124,7 +142,10 @@ class _OperationsMapBodyState extends State<OperationsMapBody> {
         ),
         Expanded(
           child: FlutterMap(
-            options: const MapOptions(initialCenter: latlong.LatLng(24.86, 67.01), initialZoom: 11),
+            options: const MapOptions(
+              initialCenter: latlong.LatLng(24.86, 67.01),
+              initialZoom: 11,
+            ),
             children: [
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -158,7 +179,14 @@ class _Legend extends StatelessWidget {
         children: [
           Icon(Icons.circle, color: color, size: 10),
           const SizedBox(width: 5),
-          Text(label, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );

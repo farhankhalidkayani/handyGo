@@ -28,28 +28,44 @@ class SafetyCenterScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.tips_and_updates_outlined, size: 18, color: scheme.onSurfaceVariant),
+              Icon(
+                Icons.tips_and_updates_outlined,
+                size: 18,
+                color: scheme.onSurfaceVariant,
+              ),
               const SizedBox(width: 6),
-              Text('Safety tips', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Safety tips',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
             ],
           ),
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(18)),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(18),
+            ),
             child: Column(
               children: _safetyTips
-                  .map((t) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.check_circle_outline, size: 18, color: Colors.green),
-                            const SizedBox(width: 10),
-                            Expanded(child: Text(t)),
-                          ],
-                        ),
-                      ))
+                  .map(
+                    (t) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.check_circle_outline,
+                            size: 18,
+                            color: Colors.green,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(child: Text(t)),
+                        ],
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
           ),
@@ -60,7 +76,9 @@ class SafetyCenterScreen extends StatelessWidget {
             child: InkWell(
               borderRadius: BorderRadius.circular(18),
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => ReportFraudScreen(reportedById: profile.id)),
+                MaterialPageRoute(
+                  builder: (_) => ReportFraudScreen(reportedById: profile.id),
+                ),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -68,16 +86,28 @@ class SafetyCenterScreen extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       backgroundColor: scheme.errorContainer,
-                      child: Icon(Icons.flag_outlined, color: scheme.onErrorContainer, size: 18),
+                      child: Icon(
+                        Icons.flag_outlined,
+                        color: scheme.onErrorContainer,
+                        size: 18,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Report fraud or a bad experience', style: TextStyle(fontWeight: FontWeight.w700)),
-                          Text('Not urgent — reviewed by an admin, not instant',
-                              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12)),
+                          const Text(
+                            'Report fraud or a bad experience',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          Text(
+                            'Not urgent — reviewed by an admin, not instant',
+                            style: TextStyle(
+                              color: scheme.onSurfaceVariant,
+                              fontSize: 12,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -91,16 +121,30 @@ class SafetyCenterScreen extends StatelessWidget {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(
+              color: Colors.red.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(20),
+            ),
             child: Column(
               children: [
-                Icon(Icons.emergency_outlined, color: Colors.red.shade700, size: 28),
+                Icon(
+                  Icons.emergency_outlined,
+                  color: Colors.red.shade700,
+                  size: 28,
+                ),
                 const SizedBox(height: 8),
-                Text('In immediate danger?',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.red.shade700)),
+                Text(
+                  'In immediate danger?',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(color: Colors.red.shade700),
+                ),
                 const SizedBox(height: 6),
-                Text('Press and hold the button below for 3 seconds to alert an admin immediately.',
-                    textAlign: TextAlign.center, style: TextStyle(color: scheme.onSurfaceVariant)),
+                Text(
+                  'Press and hold the button below for 3 seconds to alert an admin immediately.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                ),
                 const SizedBox(height: 16),
                 SosButton(raisedByRole: 'customer', raisedById: profile.id),
               ],

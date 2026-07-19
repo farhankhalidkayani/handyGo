@@ -36,7 +36,11 @@ class _SplashScreenState extends State<SplashScreen> {
 
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => PostAuthRouter(authId: authUser.$id, email: authUser.email, language: language),
+        builder: (_) => PostAuthRouter(
+          authId: authUser.$id,
+          email: authUser.email,
+          language: language,
+        ),
       ),
     );
   }
@@ -51,11 +55,21 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(color: scheme.primaryContainer, shape: BoxShape.circle),
-              child: Icon(Icons.engineering_outlined, size: 40, color: scheme.onPrimaryContainer),
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.engineering_outlined,
+                size: 40,
+                color: scheme.onPrimaryContainer,
+              ),
             ),
             const SizedBox(height: 16),
-            Text('Handy Go — Worker', style: Theme.of(context).textTheme.headlineSmall),
+            Text(
+              'Handy Go — Worker',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
             const SizedBox(height: 24),
             CircularProgressIndicator(color: scheme.primary),
           ],

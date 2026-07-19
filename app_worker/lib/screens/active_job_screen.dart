@@ -43,7 +43,11 @@ class ActiveJobScreen extends StatefulWidget {
   final UserProfile profile;
   final String bookingId;
 
-  const ActiveJobScreen({super.key, required this.profile, required this.bookingId});
+  const ActiveJobScreen({
+    super.key,
+    required this.profile,
+    required this.bookingId,
+  });
 
   @override
   State<ActiveJobScreen> createState() => _ActiveJobScreenState();
@@ -53,7 +57,10 @@ const _nextStatusByCurrent = {
   BookingStatus.workerSelected: (BookingStatus.confirmed, 'Confirm job'),
   BookingStatus.confirmed: (BookingStatus.workerOnTheWay, "I'm on the way"),
   BookingStatus.workerOnTheWay: (BookingStatus.workerArrived, "I've arrived"),
-  BookingStatus.inProgress: (BookingStatus.completionRequested, 'Mark job as done'),
+  BookingStatus.inProgress: (
+    BookingStatus.completionRequested,
+    'Mark job as done',
+  ),
 };
 
 class _ActiveJobScreenState extends State<ActiveJobScreen> {
@@ -116,13 +123,21 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
         title: const Text('Incoming call'),
         content: const Text('The customer is calling you.'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Decline')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Accept')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Decline'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Accept'),
+          ),
         ],
       ),
     );
     if (accept != true) {
-      AppServices.calls.updateStatus(callId: call.id, status: 'declined').catchError((_) {});
+      AppServices.calls
+          .updateStatus(callId: call.id, status: 'declined')
+          .catchError((_) {});
       return;
     }
     if (!mounted) return;
@@ -158,7 +173,10 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
     final booking = await AppServices.bookings.getBooking(widget.bookingId);
     if (!mounted) return;
     setState(() => _booking = booking);
-    if ([BookingStatus.confirmed, BookingStatus.workerOnTheWay].contains(booking.status)) {
+    if ([
+      BookingStatus.confirmed,
+      BookingStatus.workerOnTheWay,
+    ].contains(booking.status)) {
       _refreshRoute(booking);
     }
     if (booking.status == BookingStatus.inProgress) {
@@ -174,10 +192,12 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
     try {
       final history = await AppServices.bookings.listStatusHistory(booking.id);
       final entry = history.cast<Map<String, dynamic>?>().lastWhere(
-            (h) => h?['status'] == 'in_progress',
-            orElse: () => null,
-          );
-      final startedAt = entry != null ? DateTime.tryParse(entry['timestamp'] as String? ?? '') : null;
+        (h) => h?['status'] == 'in_progress',
+        orElse: () => null,
+      );
+      final startedAt = entry != null
+          ? DateTime.tryParse(entry['timestamp'] as String? ?? '')
+          : null;
       if (startedAt == null || !mounted) return;
       setState(() {
         _serviceStartedAt = startedAt;
@@ -185,7 +205,9 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
       });
       _timerTick = Timer.periodic(const Duration(seconds: 1), (_) {
         if (!mounted) return;
-        setState(() => _elapsed = DateTime.now().difference(_serviceStartedAt!));
+        setState(
+          () => _elapsed = DateTime.now().difference(_serviceStartedAt!),
+        );
       });
     } catch (_) {
       // timer is a nice-to-have — never block the job on it
@@ -205,7 +227,9 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
     setState(() => _loadingRoute = true);
     try {
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
       final result = await AppServices.bookings.getRoutePlan(
         bookingId: booking.id,
@@ -215,7 +239,8 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
         jobLng: booking.lng,
         scheduledAt: booking.scheduledAt,
       );
-      final workerProfile = await AppServices.profiles.findWorkerProfileByUserId(widget.profile.id);
+      final workerProfile = await AppServices.profiles
+          .findWorkerProfileByUserId(widget.profile.id);
       if (workerProfile != null) {
         AppServices.profiles
             .updateWorkerLocation(
@@ -226,16 +251,23 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
             .catchError((_) {});
       }
       final route = (result['route'] as List?)?.cast<Map<String, dynamic>>();
-      final conflicts = (result['conflicts'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      final conflicts =
+          (result['conflicts'] as List?)?.cast<Map<String, dynamic>>() ?? [];
       if (!mounted) return;
       setState(() {
         _workerPos = latlong.LatLng(position.latitude, position.longitude);
-        _etaMins = route?.isNotEmpty == true ? (route!.first['etaMins'] as num?)?.toInt() : null;
-        _etaSource = route?.isNotEmpty == true ? route!.first['etaSource'] as String? : null;
+        _etaMins = route?.isNotEmpty == true
+            ? (route!.first['etaMins'] as num?)?.toInt()
+            : null;
+        _etaSource = route?.isNotEmpty == true
+            ? route!.first['etaSource'] as String?
+            : null;
         // §9.8 W5 schedule-overlap check — only ever populated once bookings can carry a
         // scheduledAt time; the app doesn't yet have a "book for later" flow, so this stays
         // empty in practice today but is wired end-to-end for when that flow exists.
-        _scheduleConflictMins = conflicts.isNotEmpty ? (conflicts.first['lateByMins'] as num?)?.toInt() : null;
+        _scheduleConflictMins = conflicts.isNotEmpty
+            ? (conflicts.first['lateByMins'] as num?)?.toInt()
+            : null;
       });
     } catch (_) {
       // location permission denied / OSRM unreachable — ETA is a nice-to-have, never block the job
@@ -284,13 +316,21 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
             const SizedBox(height: 12),
             TextField(
               controller: materialsController,
-              decoration: const InputDecoration(labelText: 'Materials used (comma-separated)'),
+              decoration: const InputDecoration(
+                labelText: 'Materials used (comma-separated)',
+              ),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Done')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Done'),
+          ),
         ],
       ),
     );
@@ -352,13 +392,21 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
             const SizedBox(height: 12),
             TextField(
               controller: reasonController,
-              decoration: const InputDecoration(labelText: 'Reason (e.g. extra pipe fitting)'),
+              decoration: const InputDecoration(
+                labelText: 'Reason (e.g. extra pipe fitting)',
+              ),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Request')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Request'),
+          ),
         ],
       ),
     );
@@ -412,8 +460,14 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Cancel this job?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('No')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Yes, cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('No'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Yes, cancel'),
+          ),
         ],
       ),
     );
@@ -543,7 +597,10 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [scheme.primary, scheme.primary.withValues(alpha: 0.75)],
+                colors: [
+                  scheme.primary,
+                  scheme.primary.withValues(alpha: 0.75),
+                ],
               ),
             ),
             child: Column(
@@ -553,40 +610,76 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                   children: [
                     Container(
                       padding: const EdgeInsets.all(10),
-                      decoration:
-                          BoxDecoration(color: scheme.onPrimary.withValues(alpha: 0.15), shape: BoxShape.circle),
-                      child: Icon(_statusIcons[booking.status] ?? Icons.info_outline, color: scheme.onPrimary),
+                      decoration: BoxDecoration(
+                        color: scheme.onPrimary.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _statusIcons[booking.status] ?? Icons.info_outline,
+                        color: scheme.onPrimary,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Text(
                       _statusLabels[booking.status] ?? booking.status.wire,
-                      style: TextStyle(color: scheme.onPrimary, fontWeight: FontWeight.w700, fontSize: 18),
+                      style: TextStyle(
+                        color: scheme.onPrimary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 14),
-                Text(booking.problemText,
-                    style: TextStyle(color: scheme.onPrimary, fontWeight: FontWeight.w600, fontSize: 15)),
+                Text(
+                  booking.problemText,
+                  style: TextStyle(
+                    color: scheme.onPrimary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(Icons.location_on_outlined, size: 14, color: scheme.onPrimary.withValues(alpha: 0.85)),
+                    Icon(
+                      Icons.location_on_outlined,
+                      size: 14,
+                      color: scheme.onPrimary.withValues(alpha: 0.85),
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
-                      child: Text(booking.addressText,
-                          style: TextStyle(color: scheme.onPrimary.withValues(alpha: 0.85), fontSize: 13)),
+                      child: Text(
+                        booking.addressText,
+                        style: TextStyle(
+                          color: scheme.onPrimary.withValues(alpha: 0.85),
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
                   ],
                 ),
                 if (booking.finalQuote != null) ...[
                   const SizedBox(height: 8),
-                  Text('Quote: Rs. ${booking.finalQuote!.toStringAsFixed(0)}',
-                      style: TextStyle(color: scheme.onPrimary, fontWeight: FontWeight.w700)),
+                  Text(
+                    'Quote: Rs. ${booking.finalQuote!.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      color: scheme.onPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ],
                 if (booking.scheduledAt != null) ...[
                   const SizedBox(height: 4),
-                  Text('Scheduled for: ${booking.scheduledAt!.toLocal()}'.split('.').first,
-                      style: TextStyle(color: scheme.onPrimary.withValues(alpha: 0.85), fontStyle: FontStyle.italic)),
+                  Text(
+                    'Scheduled for: ${booking.scheduledAt!.toLocal()}'
+                        .split('.')
+                        .first,
+                    style: TextStyle(
+                      color: scheme.onPrimary.withValues(alpha: 0.85),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -596,20 +689,31 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(16)),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Row(
                 children: [
                   const Icon(Icons.pause_circle_outline, color: Colors.red),
                   const SizedBox(width: 10),
                   const Expanded(
-                    child: Text('This booking has been paused by an admin.',
-                        style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
+                    child: Text(
+                      'This booking has been paused by an admin.',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
           ],
-          if ([BookingStatus.confirmed, BookingStatus.workerOnTheWay].contains(booking.status)) ...[
+          if ([
+            BookingStatus.confirmed,
+            BookingStatus.workerOnTheWay,
+          ].contains(booking.status)) ...[
             const SizedBox(height: 16),
             if (_workerPos != null)
               SizedBox(
@@ -623,19 +727,28 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                     ),
                     children: [
                       TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                         userAgentPackageName: 'com.handygo.worker',
                       ),
-                      MarkerLayer(markers: [
-                        Marker(
-                          point: _workerPos!,
-                          child: const Icon(Icons.my_location, color: Colors.blue),
-                        ),
-                        Marker(
-                          point: latlong.LatLng(booking.lat, booking.lng),
-                          child: const Icon(Icons.location_on, color: Colors.red),
-                        ),
-                      ]),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: _workerPos!,
+                            child: const Icon(
+                              Icons.my_location,
+                              color: Colors.blue,
+                            ),
+                          ),
+                          Marker(
+                            point: latlong.LatLng(booking.lat, booking.lng),
+                            child: const Icon(
+                              Icons.location_on,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -644,15 +757,26 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
             Row(
               children: [
                 if (_loadingRoute)
-                  const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  const SizedBox(
+                    height: 16,
+                    width: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 else if (_etaMins != null)
-                  Text('ETA: ~$_etaMins mins${_etaSource == 'straight-line-fallback' ? ' (estimated)' : ''}',
-                      style: const TextStyle(fontWeight: FontWeight.w600))
+                  Text(
+                    'ETA: ~$_etaMins mins${_etaSource == 'straight-line-fallback' ? ' (estimated)' : ''}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  )
                 else
-                  Text('ETA unavailable', style: TextStyle(color: scheme.onSurfaceVariant)),
+                  Text(
+                    'ETA unavailable',
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  ),
                 const Spacer(),
                 TextButton.icon(
-                  onPressed: _loadingRoute ? null : () => _refreshRoute(booking),
+                  onPressed: _loadingRoute
+                      ? null
+                      : () => _refreshRoute(booking),
                   icon: const Icon(Icons.refresh, size: 18),
                   label: const Text('Refresh'),
                 ),
@@ -662,10 +786,16 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  const Icon(Icons.warning_amber, color: Colors.orange, size: 18),
+                  const Icon(
+                    Icons.warning_amber,
+                    color: Colors.orange,
+                    size: 18,
+                  ),
                   const SizedBox(width: 6),
-                  Text('Running ~$_scheduleConflictMins mins behind schedule',
-                      style: TextStyle(color: Colors.orange.shade800)),
+                  Text(
+                    'Running ~$_scheduleConflictMins mins behind schedule',
+                    style: TextStyle(color: Colors.orange.shade800),
+                  ),
                 ],
               ),
             ],
@@ -681,18 +811,30 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
               decoration: BoxDecoration(
                 color: scheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: scheme.primary.withValues(alpha: 0.25), width: 1.5),
+                border: Border.all(
+                  color: scheme.primary.withValues(alpha: 0.25),
+                  width: 1.5,
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.pin_outlined, size: 18, color: scheme.onSurfaceVariant),
+                      Icon(
+                        Icons.pin_outlined,
+                        size: 18,
+                        color: scheme.onSurfaceVariant,
+                      ),
                       const SizedBox(width: 6),
                       Expanded(
-                        child: Text('Ask the customer for their 4-digit code to start the service.',
-                            style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13)),
+                        child: Text(
+                          'Ask the customer for their 4-digit code to start the service.',
+                          style: TextStyle(
+                            color: scheme.onSurfaceVariant,
+                            fontSize: 13,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -700,15 +842,27 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                   TextField(
                     controller: _otpController,
                     keyboardType: TextInputType.number,
-                    style: const TextStyle(fontSize: 22, letterSpacing: 4, fontWeight: FontWeight.w700),
-                    decoration: const InputDecoration(labelText: 'Customer OTP'),
+                    style: const TextStyle(
+                      fontSize: 22,
+                      letterSpacing: 4,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'Customer OTP',
+                    ),
                   ),
                   const SizedBox(height: 16),
                   FilledButton.icon(
                     onPressed: _busy ? null : _submitOtp,
                     icon: _busy
                         ? const SizedBox(
-                            height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
                         : const Icon(Icons.play_circle_outline),
                     label: const Text('Start service'),
                   ),
@@ -719,10 +873,18 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
             FilledButton.icon(
               onPressed: _busy
                   ? null
-                  : () => next.$1 == BookingStatus.completionRequested ? _markJobDone() : _advance(next.$1),
+                  : () => next.$1 == BookingStatus.completionRequested
+                        ? _markJobDone()
+                        : _advance(next.$1),
               icon: _busy
                   ? const SizedBox(
-                      height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : const Icon(Icons.arrow_forward),
               label: Text(next.$2),
             )
@@ -730,13 +892,21 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 20),
-              decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(18)),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(18),
+              ),
               child: Column(
                 children: [
-                  Icon(Icons.hourglass_top_outlined, color: scheme.onSurfaceVariant),
+                  Icon(
+                    Icons.hourglass_top_outlined,
+                    color: scheme.onSurfaceVariant,
+                  ),
                   const SizedBox(height: 6),
-                  Text('Waiting for the customer to confirm & pay.',
-                      style: TextStyle(color: scheme.onSurfaceVariant)),
+                  Text(
+                    'Waiting for the customer to confirm & pay.',
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  ),
                 ],
               ),
             ),
@@ -752,19 +922,27 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                 ),
                 child: Column(
                   children: [
-                    Text('SERVICE TIME',
-                        style: TextStyle(
-                            color: scheme.onSecondaryContainer.withValues(alpha: 0.8),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1)),
+                    Text(
+                      'SERVICE TIME',
+                      style: TextStyle(
+                        color: scheme.onSecondaryContainer.withValues(
+                          alpha: 0.8,
+                        ),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text(_formatElapsed(_elapsed),
-                        style: TextStyle(
-                            color: scheme.onSecondaryContainer,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 28,
-                            fontFeatures: const [FontFeature.tabularFigures()])),
+                    Text(
+                      _formatElapsed(_elapsed),
+                      style: TextStyle(
+                        color: scheme.onSecondaryContainer,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 28,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -773,12 +951,17 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
-                decoration:
-                    BoxDecoration(color: scheme.tertiaryContainer, borderRadius: BorderRadius.circular(16)),
+                decoration: BoxDecoration(
+                  color: scheme.tertiaryContainer,
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Text(
                   'Waiting for customer to approve Rs. ${booking.pendingAdditionalCharge!.toStringAsFixed(0)} '
                   '(${booking.pendingAdditionalChargeReason ?? ''})',
-                  style: TextStyle(color: scheme.onTertiaryContainer, fontStyle: FontStyle.italic),
+                  style: TextStyle(
+                    color: scheme.onTertiaryContainer,
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
               )
             else
@@ -788,8 +971,11 @@ class _ActiveJobScreenState extends State<ActiveJobScreen> {
                 label: const Text('Request additional charge'),
               ),
           ],
-          if (![BookingStatus.serviceStarted, BookingStatus.inProgress, BookingStatus.completionRequested]
-              .contains(booking.status)) ...[
+          if (![
+            BookingStatus.serviceStarted,
+            BookingStatus.inProgress,
+            BookingStatus.completionRequested,
+          ].contains(booking.status)) ...[
             const SizedBox(height: 16),
             Center(
               child: TextButton(

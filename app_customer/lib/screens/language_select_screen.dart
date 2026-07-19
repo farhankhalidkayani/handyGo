@@ -13,7 +13,9 @@ class LanguageSelectScreen extends StatelessWidget {
     await prefs.setString(languagePrefKey, code);
     if (!context.mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => LocationPermissionScreen(language: code)),
+      MaterialPageRoute(
+        builder: (_) => LocationPermissionScreen(language: code),
+      ),
     );
   }
 

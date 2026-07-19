@@ -41,7 +41,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       double? lng;
       try {
         final position = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+          ),
         );
         lat = position.latitude;
         lng = position.longitude;
@@ -68,7 +70,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
           builder: (_) => HomeScreen(
-            profile: UserProfile.fromMap({...userDoc.data, '\$id': userDoc.$id}),
+            profile: UserProfile.fromMap({
+              ...userDoc.data,
+              '\$id': userDoc.$id,
+            }),
           ),
         ),
         (route) => false,
@@ -105,21 +110,35 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   Center(
                     child: Container(
                       padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(color: scheme.primaryContainer, shape: BoxShape.circle),
-                      child: Icon(Icons.person_outline, size: 32, color: scheme.onPrimaryContainer),
+                      decoration: BoxDecoration(
+                        color: scheme.primaryContainer,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.person_outline,
+                        size: 32,
+                        color: scheme.onPrimaryContainer,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
                   TextFormField(
                     controller: _nameController,
-                    decoration: const InputDecoration(labelText: 'Full name', prefixIcon: Icon(Icons.badge_outlined)),
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+                    decoration: const InputDecoration(
+                      labelText: 'Full name',
+                      prefixIcon: Icon(Icons.badge_outlined),
+                    ),
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Name is required'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _phoneController,
                     decoration: const InputDecoration(
-                        labelText: 'Phone (e.g. +923001234567)', prefixIcon: Icon(Icons.phone_outlined)),
+                      labelText: 'Phone (e.g. +923001234567)',
+                      prefixIcon: Icon(Icons.phone_outlined),
+                    ),
                     keyboardType: TextInputType.phone,
                   ),
                   const SizedBox(height: 24),
@@ -131,7 +150,13 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     onPressed: _saving ? null : _save,
                     icon: _saving
                         ? const SizedBox(
-                            height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
                         : const Icon(Icons.arrow_forward),
                     label: const Text('Continue'),
                   ),
