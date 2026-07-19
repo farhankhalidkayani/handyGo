@@ -36,7 +36,9 @@
                 "databases.handygo.collections.messages.documents.*.create",
                 "databases.handygo.collections.worker_offers.documents.*.create",
                 "databases.handygo.collections.sos_alerts.documents.*.create",
-                "databases.handygo.collections.fraud_reports.documents.*.create"
+                "databases.handygo.collections.fraud_reports.documents.*.create",
+                "databases.handygo.collections.bookings.documents.*.create",
+                "databases.handygo.collections.bookings.documents.*.update"
             ],
             "schedule": "0 0 * * *",
             "timeout": 90

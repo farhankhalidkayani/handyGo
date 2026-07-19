@@ -6,14 +6,20 @@
 // invocation this is.
 const { parseBody } = require('./lib/parseBody');
 
+const scoreEngine = require('./handlers/scoreEngine');
+const analyticsRollup = require('./handlers/analyticsRollup');
+
+// bookings has no own handler module — any create/update just triggers a full analytics
+// recompute (cheap: one bookings list + one worker_profiles list, see analyticsRollup.js),
+// so the admin panel's Analytics tab stays live instead of only updating at the daily
+// scheduled rollup. Ignores the individual booking payload; recomputes the whole day.
 const eventHandlers = {
   messages: require('./handlers/translate'),
   worker_offers: require('./handlers/priceGuard'),
   sos_alerts: require('./handlers/sos'),
   fraud_reports: require('./handlers/fraud'),
+  bookings: async (doc, ctx) => analyticsRollup(ctx),
 };
-const scoreEngine = require('./handlers/scoreEngine');
-const analyticsRollup = require('./handlers/analyticsRollup');
 
 function collectionFromEventHeader(headerValue) {
   const match = /\.collections\.([^.]+)\.documents\./.exec(headerValue || '');
