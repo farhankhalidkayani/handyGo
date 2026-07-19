@@ -32,11 +32,22 @@ class _AnalyticsBodyState extends State<AnalyticsBody> {
   Map<String, String> _categoryNames = {};
   bool _loading = true;
   String? _error;
+  RealtimeSubscription? _analyticsSub;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _analyticsSub = AppServices.realtime.subscribe([
+      'databases.${HandyGoConfig.databaseId}.collections.${Collections.analyticsDaily}.documents',
+    ]);
+    _analyticsSub!.stream.listen((_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _analyticsSub?.close();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -52,7 +63,8 @@ class _AnalyticsBodyState extends State<AnalyticsBody> {
       setState(() {
         _categoryNames = {for (final c in categories) c.id: c.name};
         _latest = days.isNotEmpty ? days.first : null;
-        _recentDays = days.reversed.toList(); // oldest -> newest, left-to-right on the chart
+        _recentDays = days.reversed
+            .toList(); // oldest -> newest, left-to-right on the chart
         _loading = false;
       });
     } catch (e) {
@@ -66,7 +78,10 @@ class _AnalyticsBodyState extends State<AnalyticsBody> {
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_error != null) return Center(child: Text(_error!, style: const TextStyle(color: Colors.red)));
+    if (_error != null)
+      return Center(
+        child: Text(_error!, style: const TextStyle(color: Colors.red)),
+      );
     final latest = _latest;
     if (latest == null) {
       return const Center(
@@ -81,16 +96,24 @@ class _AnalyticsBodyState extends State<AnalyticsBody> {
       );
     }
 
-    final demandByCategory = Map<String, dynamic>.from(jsonDecode(latest['demandByCategory'] as String? ?? '{}'));
-    final cancellationReasons =
-        Map<String, dynamic>.from(jsonDecode(latest['cancellationReasons'] as String? ?? '{}'));
-    final maxDemand = demandByCategory.values.cast<int>().fold<int>(0, (max, v) => v > max ? v : max);
+    final demandByCategory = Map<String, dynamic>.from(
+      jsonDecode(latest['demandByCategory'] as String? ?? '{}'),
+    );
+    final cancellationReasons = Map<String, dynamic>.from(
+      jsonDecode(latest['cancellationReasons'] as String? ?? '{}'),
+    );
+    final maxDemand = demandByCategory.values.cast<int>().fold<int>(
+      0,
+      (max, v) => v > max ? v : max,
+    );
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text('Today (${(latest['date'] as String).split('T').first})',
-            style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          'Today (${(latest['date'] as String).split('T').first})',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 12),
         Wrap(
           spacing: 12,
@@ -100,7 +123,10 @@ class _AnalyticsBodyState extends State<AnalyticsBody> {
             _StatCard(label: 'Completed', value: '${latest['completed']}'),
             _StatCard(label: 'Cancelled', value: '${latest['cancelled']}'),
             _StatCard(label: 'Revenue', value: 'Rs. ${latest['revenue']}'),
-            _StatCard(label: 'Avg rating', value: (latest['avgRating'] as num).toStringAsFixed(1)),
+            _StatCard(
+              label: 'Avg rating',
+              value: (latest['avgRating'] as num).toStringAsFixed(1),
+            ),
           ],
         ),
         if ((latest['aiNarrative'] as String?)?.isNotEmpty ?? false) ...[
@@ -114,11 +140,19 @@ class _AnalyticsBodyState extends State<AnalyticsBody> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.auto_awesome, size: 18, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                Icon(
+                  Icons.auto_awesome,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(latest['aiNarrative'] as String,
-                      style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer)),
+                  child: Text(
+                    latest['aiNarrative'] as String,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -126,15 +160,23 @@ class _AnalyticsBodyState extends State<AnalyticsBody> {
         ],
         if (_recentDays.length > 1) ...[
           const SizedBox(height: 24),
-          Text('Revenue (last ${_recentDays.length} days)', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            'Revenue (last ${_recentDays.length} days)',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 8),
           _TrendChart(
-            values: _recentDays.map((d) => (d['revenue'] as num?)?.toDouble() ?? 0).toList(),
+            values: _recentDays
+                .map((d) => (d['revenue'] as num?)?.toDouble() ?? 0)
+                .toList(),
             color: Colors.green,
             valueFormatter: (v) => 'Rs. ${v.toStringAsFixed(0)}',
           ),
           const SizedBox(height: 24),
-          Text('Cancellation rate (last ${_recentDays.length} days)', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            'Cancellation rate (last ${_recentDays.length} days)',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 8),
           _TrendChart(
             values: _recentDays.map((d) {
@@ -146,7 +188,10 @@ class _AnalyticsBodyState extends State<AnalyticsBody> {
             valueFormatter: (v) => '${v.toStringAsFixed(0)}%',
           ),
           const SizedBox(height: 24),
-          Text('Daily bookings (last ${_recentDays.length} days)', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            'Daily bookings (last ${_recentDays.length} days)',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const Text(
             'True customer-growth (unique new customers) isn\'t tracked separately — this is '
             'total bookings per day as the closest available proxy.',
@@ -154,16 +199,26 @@ class _AnalyticsBodyState extends State<AnalyticsBody> {
           ),
           const SizedBox(height: 8),
           _TrendChart(
-            values: _recentDays.map((d) => (d['totalBookings'] as num?)?.toDouble() ?? 0).toList(),
+            values: _recentDays
+                .map((d) => (d['totalBookings'] as num?)?.toDouble() ?? 0)
+                .toList(),
             color: Colors.blue,
             valueFormatter: (v) => v.toStringAsFixed(0),
           ),
         ],
         const SizedBox(height: 24),
-        Text('Demand by category', style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          'Demand by category',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 10),
         if (demandByCategory.isEmpty)
-          Text('No bookings recorded today.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant))
+          Text(
+            'No bookings recorded today.',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          )
         else
           Container(
             padding: const EdgeInsets.all(16),
@@ -179,19 +234,30 @@ class _AnalyticsBodyState extends State<AnalyticsBody> {
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   child: Row(
                     children: [
-                      SizedBox(width: 110, child: Text(name, style: const TextStyle(fontWeight: FontWeight.w600))),
+                      SizedBox(
+                        width: 110,
+                        child: Text(
+                          name,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
                       Expanded(
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: LinearProgressIndicator(
                             value: maxDemand == 0 ? 0 : count / maxDemand,
                             minHeight: 10,
-                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
                           ),
                         ),
                       ),
                       const SizedBox(width: 10),
-                      Text('$count', style: const TextStyle(fontWeight: FontWeight.w700)),
+                      Text(
+                        '$count',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
                     ],
                   ),
                 );
@@ -199,63 +265,97 @@ class _AnalyticsBodyState extends State<AnalyticsBody> {
             ),
           ),
         const SizedBox(height: 24),
-        Text('Cancellation reasons', style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          'Cancellation reasons',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 10),
         if (cancellationReasons.isEmpty)
-          Text('No cancellations recorded today.',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant))
+          Text(
+            'No cancellations recorded today.',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          )
         else
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: cancellationReasons.entries
-                .map((e) => Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text('${e.key}: ${e.value}', style: const TextStyle(fontSize: 12)),
-                    ))
+                .map(
+                  (e) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${e.key}: ${e.value}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                )
                 .toList(),
           ),
         const SizedBox(height: 24),
-        Text('Worker-shortage areas', style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          'Worker-shortage areas',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 10),
-        Builder(builder: (context) {
-          final shortageAreas =
-              Map<String, dynamic>.from(jsonDecode(latest['workerShortageAreas'] as String? ?? '{}'));
-          if (shortageAreas.isEmpty) {
-            return Text('No shortage areas detected today.',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant));
-          }
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: shortageAreas.values.map((raw) {
-              final area = Map<String, dynamic>.from(raw as Map);
-              final lat = (area['lat'] as num).toStringAsFixed(2);
-              final lng = (area['lng'] as num).toStringAsFixed(2);
-              return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.warning_amber, color: Colors.orange.shade800, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text('~$lat, $lng — ${area['demand']} booking(s), no online workers nearby',
-                          style: TextStyle(color: Colors.orange.shade800, fontSize: 13)),
-                    ),
-                  ],
+        Builder(
+          builder: (context) {
+            final shortageAreas = Map<String, dynamic>.from(
+              jsonDecode(latest['workerShortageAreas'] as String? ?? '{}'),
+            );
+            if (shortageAreas.isEmpty) {
+              return Text(
+                'No shortage areas detected today.',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               );
-            }).toList(),
-          );
-        }),
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: shortageAreas.values.map((raw) {
+                final area = Map<String, dynamic>.from(raw as Map);
+                final lat = (area['lat'] as num).toStringAsFixed(2);
+                final lng = (area['lng'] as num).toStringAsFixed(2);
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.warning_amber,
+                        color: Colors.orange.shade800,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '~$lat, $lng — ${area['demand']} booking(s), no online workers nearby',
+                          style: TextStyle(
+                            color: Colors.orange.shade800,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        ),
       ],
     );
   }
@@ -281,10 +381,20 @@ class _StatCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(_statCardMeta[label] ?? Icons.info_outline, size: 18, color: scheme.primary),
+          Icon(
+            _statCardMeta[label] ?? Icons.info_outline,
+            size: 18,
+            color: scheme.primary,
+          ),
           const SizedBox(height: 10),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
-          Text(label, style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12)),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 20),
+          ),
+          Text(
+            label,
+            style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+          ),
         ],
       ),
     );
@@ -298,7 +408,11 @@ class _TrendChart extends StatelessWidget {
   final Color color;
   final String Function(double) valueFormatter;
 
-  const _TrendChart({required this.values, required this.color, required this.valueFormatter});
+  const _TrendChart({
+    required this.values,
+    required this.color,
+    required this.valueFormatter,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -327,9 +441,14 @@ class _TrendChart extends StatelessWidget {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [color.withValues(alpha: 0.9), color.withValues(alpha: 0.5)],
+                        colors: [
+                          color.withValues(alpha: 0.9),
+                          color.withValues(alpha: 0.5),
+                        ],
                       ),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(6),
+                      ),
                     ),
                   ),
                 ),

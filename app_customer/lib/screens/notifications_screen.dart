@@ -93,7 +93,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     ],
                   ),
                 )
-              : ListView.builder(
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView.builder(
                   padding: const EdgeInsets.all(12),
                   itemCount: _notifications.length,
                   itemBuilder: (context, i) {
@@ -121,6 +123,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       ),
                     );
                   },
+                  ),
                 ),
     );
   }

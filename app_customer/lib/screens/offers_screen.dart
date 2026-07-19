@@ -255,6 +255,8 @@ class _OffersScreenState extends State<OffersScreen> {
                   )
                 else
                   Expanded(
+                    child: RefreshIndicator(
+                    onRefresh: _load,
                     child: ListView.builder(
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                       itemCount: sentOffers.length,
@@ -375,6 +377,7 @@ class _OffersScreenState extends State<OffersScreen> {
                           ),
                         ).animate().fadeIn(duration: 250.ms, delay: (i * 60).ms).slideY(begin: 0.06, end: 0);
                       },
+                    ),
                     ),
                   ),
               ],

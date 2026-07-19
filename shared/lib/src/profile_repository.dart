@@ -12,10 +12,12 @@ import 'models/worker_profile.dart';
 class ProfileRepository {
   final Databases databases;
   final AiRouterClient aiRouter;
+  final Realtime realtime;
 
   ProfileRepository(Client client)
       : databases = Databases(client),
-        aiRouter = AiRouterClient(client);
+        aiRouter = AiRouterClient(client),
+        realtime = Realtime(client);
 
   Future<UserProfile?> findByAuthId(String authId) async {
     final res = await databases.listDocuments(
@@ -24,7 +26,8 @@ class ProfileRepository {
       queries: [Query.equal('authId', authId), Query.limit(1)],
     );
     if (res.documents.isEmpty) return null;
-    return UserProfile.fromMap(res.documents.first.data..addAll({'\$id': res.documents.first.$id}));
+    return UserProfile.fromMap(
+        res.documents.first.data..addAll({'\$id': res.documents.first.$id}));
   }
 
   Future<UserProfile?> findById(String userId) async {
@@ -44,7 +47,8 @@ class ProfileRepository {
   /// read) so e.g. a worker can toggle their own availability directly from the client —
   /// everything else (status transitions, verification, scores) still only writable via the
   /// API-key-backed Functions, per §11.
-  List<String> _ownerPermissions(String authId) => [Permission.write(Role.user(authId))];
+  List<String> _ownerPermissions(String authId) =>
+      [Permission.write(Role.user(authId))];
 
   Future<models.Document> createUserDocument({
     required String authId,
@@ -168,7 +172,8 @@ class ProfileRepository {
   /// functions/aiRouter/src/handlers/withdrawWallet.js for why this can't be a direct client
   /// update (walletBalance is server-only, only ever credited on booking completion).
   Future<Map<String, dynamic>> withdrawWallet(String workerProfileId) {
-    return aiRouter.call('withdrawWallet', {'workerProfileId': workerProfileId});
+    return aiRouter
+        .call('withdrawWallet', {'workerProfileId': workerProfileId});
   }
 
   /// Plan §12 Worker checklist "AI performance tips" — see workerAssist.js's `performanceTips`
@@ -189,6 +194,15 @@ class ProfileRepository {
       queries: [Query.equal('userId', userId), Query.limit(1)],
     );
     if (res.documents.isEmpty) return null;
-    return WorkerProfile.fromMap({...res.documents.first.data, '\$id': res.documents.first.$id});
+    return WorkerProfile.fromMap(
+        {...res.documents.first.data, '\$id': res.documents.first.$id});
+  }
+
+  /// Raw realtime channel for the worker_profiles collection — callers filter by workerId/
+  /// verificationStatus themselves, same pattern as BookingRepository.subscribeToBookings.
+  RealtimeSubscription subscribeToWorkerProfiles() {
+    return realtime.subscribe([
+      'databases.${HandyGoConfig.databaseId}.collections.${Collections.workerProfiles}.documents',
+    ]);
   }
 }

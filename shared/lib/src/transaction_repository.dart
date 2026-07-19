@@ -8,8 +8,11 @@ import 'models/wallet_withdrawal.dart';
 /// Every transaction is server-created only (transitionBooking.js) — no client write path.
 class TransactionRepository {
   final Databases databases;
+  final Realtime realtime;
 
-  TransactionRepository(Client client) : databases = Databases(client);
+  TransactionRepository(Client client)
+      : databases = Databases(client),
+        realtime = Realtime(client);
 
   Future<List<BookingTransaction>> listRecent({int limit = 100}) async {
     final res = await databases.listDocuments(
@@ -17,7 +20,10 @@ class TransactionRepository {
       collectionId: Collections.transactions,
       queries: [Query.orderDesc('\$createdAt'), Query.limit(limit)],
     );
-    return res.documents.map((d) => BookingTransaction.fromMap({...d.data, '\$id': d.$id, '\$createdAt': d.$createdAt})).toList();
+    return res.documents
+        .map((d) => BookingTransaction.fromMap(
+            {...d.data, '\$id': d.$id, '\$createdAt': d.$createdAt}))
+        .toList();
   }
 
   /// Worker dashboard's "today's earnings" (plan §12 Worker checklist). Relies on the
@@ -25,7 +31,8 @@ class TransactionRepository {
   /// session can only ever see transactions they were actually paid on.
   Future<List<BookingTransaction>> listForWorkerToday(String workerId) async {
     final startOfToday = DateTime.now().toUtc();
-    final midnight = DateTime.utc(startOfToday.year, startOfToday.month, startOfToday.day);
+    final midnight =
+        DateTime.utc(startOfToday.year, startOfToday.month, startOfToday.day);
     final res = await databases.listDocuments(
       databaseId: HandyGoConfig.databaseId,
       collectionId: Collections.transactions,
@@ -35,7 +42,10 @@ class TransactionRepository {
         Query.limit(100),
       ],
     );
-    return res.documents.map((d) => BookingTransaction.fromMap({...d.data, '\$id': d.$id, '\$createdAt': d.$createdAt})).toList();
+    return res.documents
+        .map((d) => BookingTransaction.fromMap(
+            {...d.data, '\$id': d.$id, '\$createdAt': d.$createdAt}))
+        .toList();
   }
 
   /// The invoice for a completed booking (plan §12 "Completion → invoice → payment").
@@ -47,16 +57,29 @@ class TransactionRepository {
     );
     if (res.documents.isEmpty) return null;
     final d = res.documents.first;
-    return BookingTransaction.fromMap({...d.data, '\$id': d.$id, '\$createdAt': d.$createdAt});
+    return BookingTransaction.fromMap(
+        {...d.data, '\$id': d.$id, '\$createdAt': d.$createdAt});
   }
 
   /// Admin Finance tab's withdrawal log (plan §12 "Payments & finance audit").
-  Future<List<WalletWithdrawal>> listRecentWithdrawals({int limit = 100}) async {
+  Future<List<WalletWithdrawal>> listRecentWithdrawals(
+      {int limit = 100}) async {
     final res = await databases.listDocuments(
       databaseId: HandyGoConfig.databaseId,
       collectionId: Collections.walletWithdrawals,
       queries: [Query.orderDesc('\$createdAt'), Query.limit(limit)],
     );
-    return res.documents.map((d) => WalletWithdrawal.fromMap({...d.data, '\$id': d.$id, '\$createdAt': d.$createdAt})).toList();
+    return res.documents
+        .map((d) => WalletWithdrawal.fromMap(
+            {...d.data, '\$id': d.$id, '\$createdAt': d.$createdAt}))
+        .toList();
+  }
+
+  /// Raw realtime channel for the transactions collection — callers filter by workerId
+  /// themselves, same pattern as BookingRepository.subscribeToBookings.
+  RealtimeSubscription subscribeToTransactions() {
+    return realtime.subscribe([
+      'databases.${HandyGoConfig.databaseId}.collections.${Collections.transactions}.documents',
+    ]);
   }
 }

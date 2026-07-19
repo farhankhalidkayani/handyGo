@@ -18,20 +18,36 @@ class VerificationQueueBody extends StatefulWidget {
 class _VerificationQueueBodyState extends State<VerificationQueueBody> {
   late Future<List<WorkerProfile>> _pendingFuture;
   String? _actionError;
+  RealtimeSubscription? _profileSub;
 
   @override
   void initState() {
     super.initState();
     _pendingFuture = _loadPending();
+    _profileSub = AppServices.profiles.subscribeToWorkerProfiles();
+    _profileSub!.stream.listen((_) {
+      if (mounted) setState(() => _pendingFuture = _loadPending());
+    });
+  }
+
+  @override
+  void dispose() {
+    _profileSub?.close();
+    super.dispose();
   }
 
   Future<List<WorkerProfile>> _loadPending() async {
     final res = await AppServices.databases.listDocuments(
       databaseId: HandyGoConfig.databaseId,
       collectionId: Collections.workerProfiles,
-      queries: [Query.equal('verificationStatus', 'under_review'), Query.limit(50)],
+      queries: [
+        Query.equal('verificationStatus', 'under_review'),
+        Query.limit(50),
+      ],
     );
-    return res.documents.map((d) => WorkerProfile.fromMap({...d.data, '\$id': d.$id})).toList();
+    return res.documents
+        .map((d) => WorkerProfile.fromMap({...d.data, '\$id': d.$id}))
+        .toList();
   }
 
   /// Reject/suspend/request-more-info all need a reason so the worker knows what to fix —
@@ -49,7 +65,10 @@ class _VerificationQueueBodyState extends State<VerificationQueueBody> {
           autofocus: true,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(controller.text.trim()),
             child: const Text('Send'),
@@ -63,12 +82,18 @@ class _VerificationQueueBodyState extends State<VerificationQueueBody> {
   Future<void> _decide(WorkerProfile worker, String status) async {
     String? reason;
     if (status == 'rejected' || status == 'suspended') {
-      reason = await _promptForReason(status == 'rejected' ? 'Reason for rejecting' : 'Reason for suspending');
+      reason = await _promptForReason(
+        status == 'rejected' ? 'Reason for rejecting' : 'Reason for suspending',
+      );
       if (reason == null) return;
     }
     setState(() => _actionError = null);
     try {
-      await AppServices.updateWorkerVerification(workerProfileId: worker.id, status: status, reason: reason);
+      await AppServices.updateWorkerVerification(
+        workerProfileId: worker.id,
+        status: status,
+        reason: reason,
+      );
       setState(() {
         _pendingFuture = _loadPending();
       });
@@ -88,7 +113,9 @@ class _VerificationQueueBodyState extends State<VerificationQueueBody> {
         reason: reason,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request sent to worker.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Request sent to worker.')));
     } catch (e) {
       setState(() => _actionError = 'Action failed: $e');
     }
@@ -106,10 +133,16 @@ class _VerificationQueueBodyState extends State<VerificationQueueBody> {
               color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(Icons.image_not_supported_outlined, color: scheme.onSurfaceVariant),
+            child: Icon(
+              Icons.image_not_supported_outlined,
+              color: scheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 6),
-          Text(label, style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+          Text(
+            label,
+            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+          ),
         ],
       );
     }
@@ -136,13 +169,19 @@ class _VerificationQueueBodyState extends State<VerificationQueueBody> {
                 width: 80,
                 height: 80,
                 color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                child: Icon(Icons.broken_image_outlined, color: scheme.onSurfaceVariant),
+                child: Icon(
+                  Icons.broken_image_outlined,
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
             ),
           ),
         ),
         const SizedBox(height: 6),
-        Text(label, style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+        ),
       ],
     );
   }
@@ -170,9 +209,16 @@ class _VerificationQueueBodyState extends State<VerificationQueueBody> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.task_alt_outlined, size: 40, color: scheme.onSurfaceVariant),
+                      Icon(
+                        Icons.task_alt_outlined,
+                        size: 40,
+                        color: scheme.onSurfaceVariant,
+                      ),
                       const SizedBox(height: 10),
-                      Text('No workers awaiting review.', style: TextStyle(color: scheme.onSurfaceVariant)),
+                      Text(
+                        'No workers awaiting review.',
+                        style: TextStyle(color: scheme.onSurfaceVariant),
+                      ),
                     ],
                   ),
                 );
@@ -197,7 +243,11 @@ class _VerificationQueueBodyState extends State<VerificationQueueBody> {
                             CircleAvatar(
                               radius: 18,
                               backgroundColor: scheme.primaryContainer,
-                              child: Icon(Icons.person_outline, color: scheme.onPrimaryContainer, size: 18),
+                              child: Icon(
+                                Icons.person_outline,
+                                color: scheme.onPrimaryContainer,
+                                size: 18,
+                              ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
@@ -205,18 +255,28 @@ class _VerificationQueueBodyState extends State<VerificationQueueBody> {
                                 spacing: 6,
                                 runSpacing: 6,
                                 children: w.skills
-                                    .map((s) => Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: scheme.secondaryContainer,
-                                            borderRadius: BorderRadius.circular(10),
+                                    .map(
+                                      (s) => Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: scheme.secondaryContainer,
+                                          borderRadius: BorderRadius.circular(
+                                            10,
                                           ),
-                                          child: Text(s,
-                                              style: TextStyle(
-                                                  color: scheme.onSecondaryContainer,
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w600)),
-                                        ))
+                                        ),
+                                        child: Text(
+                                          s,
+                                          style: TextStyle(
+                                            color: scheme.onSecondaryContainer,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    )
                                     .toList(),
                               ),
                             ),
@@ -247,9 +307,14 @@ class _VerificationQueueBodyState extends State<VerificationQueueBody> {
                               label: const Text('Reject'),
                             ),
                             OutlinedButton.icon(
-                              style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.orange,
+                              ),
                               onPressed: () => _decide(w, 'suspended'),
-                              icon: const Icon(Icons.pause_circle_outline, size: 18),
+                              icon: const Icon(
+                                Icons.pause_circle_outline,
+                                size: 18,
+                              ),
                               label: const Text('Suspend'),
                             ),
                             OutlinedButton.icon(

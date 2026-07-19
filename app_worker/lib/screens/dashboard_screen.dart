@@ -1,3 +1,4 @@
+import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:handygo_shared/handygo_shared.dart';
@@ -15,7 +16,11 @@ class DashboardScreen extends StatefulWidget {
   final UserProfile profile;
   final WorkerProfile worker;
 
-  const DashboardScreen({super.key, required this.profile, required this.worker});
+  const DashboardScreen({
+    super.key,
+    required this.profile,
+    required this.worker,
+  });
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -30,6 +35,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _unreadCount = 0;
   final Set<String> _declinedJobIds = {};
   double _todayEarnings = 0;
+  RealtimeSubscription? _bookingSub;
+  RealtimeSubscription? _transactionSub;
 
   @override
   void initState() {
@@ -38,12 +45,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _refresh();
     _loadUnreadCount();
     _loadTodayEarnings();
+    _bookingSub = AppServices.bookings.subscribeToBookings();
+    _bookingSub!.stream.listen((_) {
+      if (mounted) setState(_refresh);
+    });
+    _transactionSub = AppServices.transactions.subscribeToTransactions();
+    _transactionSub!.stream.listen((_) => _loadTodayEarnings());
+  }
+
+  @override
+  void dispose() {
+    _bookingSub?.close();
+    _transactionSub?.close();
+    super.dispose();
   }
 
   Future<void> _loadTodayEarnings() async {
     try {
-      final transactions = await AppServices.transactions.listForWorkerToday(widget.profile.id);
-      final total = transactions.fold<double>(0, (sum, t) => sum + t.netToWorker);
+      final transactions = await AppServices.transactions.listForWorkerToday(
+        widget.profile.id,
+      );
+      final total = transactions.fold<double>(
+        0,
+        (sum, t) => sum + t.netToWorker,
+      );
       if (mounted) setState(() => _todayEarnings = total);
     } catch (_) {
       // best-effort — dashboard still works without this
@@ -51,37 +76,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadUnreadCount() async {
-    final notifications = await AppServices.notifications.listForUser(widget.profile.id);
+    final notifications = await AppServices.notifications.listForUser(
+      widget.profile.id,
+    );
     if (!mounted) return;
     setState(() => _unreadCount = notifications.where((n) => !n.read).length);
   }
 
   Future<void> _openWallet() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => WalletScreen(worker: _worker)),
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => WalletScreen(worker: _worker)));
+    final refreshed = await AppServices.profiles.findWorkerProfileByUserId(
+      widget.profile.id,
     );
-    final refreshed = await AppServices.profiles.findWorkerProfileByUserId(widget.profile.id);
     if (mounted && refreshed != null) setState(() => _worker = refreshed);
     _loadTodayEarnings();
   }
 
   Future<void> _openNotifications() async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => NotificationsScreen(profile: widget.profile)),
+      MaterialPageRoute(
+        builder: (_) => NotificationsScreen(profile: widget.profile),
+      ),
     );
     _loadUnreadCount();
   }
 
   void _refresh() {
-    _activeJobFuture = AppServices.bookings.findActiveForWorker(widget.profile.id);
+    _activeJobFuture = AppServices.bookings.findActiveForWorker(
+      widget.profile.id,
+    );
     if (_worker.availability == 'online') {
       _openJobsFuture = _loadOpenJobs();
     }
   }
 
+  Future<void> _pullToRefresh() async {
+    setState(_refresh);
+    await Future.wait([
+      _activeJobFuture ?? Future.value(),
+      _openJobsFuture ?? Future.value(),
+    ]);
+    await _loadTodayEarnings();
+    await _loadUnreadCount();
+  }
+
   Future<List<Booking>> _loadOpenJobs() async {
     final categories = await AppServices.categories.listAll();
-    final categoryIds = categories.where((c) => _worker.skills.contains(c.name)).map((c) => c.id).toList();
+    final categoryIds = categories
+        .where((c) => _worker.skills.contains(c.name))
+        .map((c) => c.id)
+        .toList();
     return AppServices.bookings.listOpenBookings(categoryIds);
   }
 
@@ -122,7 +168,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _sendOffer(Booking booking) async {
     final sent = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => SendOfferScreen(profile: widget.profile, booking: booking),
+        builder: (_) =>
+            SendOfferScreen(profile: widget.profile, booking: booking),
       ),
     );
     if (sent == true && mounted) setState(_refresh);
@@ -130,7 +177,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _openActiveJob(Booking booking) {
     Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => ActiveJobScreen(profile: widget.profile, bookingId: booking.id)))
+        .push(
+          MaterialPageRoute(
+            builder: (_) =>
+                ActiveJobScreen(profile: widget.profile, bookingId: booking.id),
+          ),
+        )
         .then((_) => setState(_refresh));
   }
 
@@ -155,7 +207,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: const Icon(Icons.shield_outlined),
             tooltip: 'Safety Center',
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => SafetyCenterScreen(profile: widget.profile)),
+              MaterialPageRoute(
+                builder: (_) => SafetyCenterScreen(profile: widget.profile),
+              ),
             ),
           ),
           IconButton(
@@ -166,22 +220,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Stack(
             alignment: Alignment.center,
             children: [
-              IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: _openNotifications),
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined),
+                onPressed: _openNotifications,
+              ),
               if (_unreadCount > 0)
                 Positioned(
                   top: 8,
                   right: 8,
                   child: Container(
                     padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(color: scheme.error, shape: BoxShape.circle),
-                    constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
-                    child: Text('$_unreadCount',
-                        style: TextStyle(color: scheme.onError, fontSize: 9), textAlign: TextAlign.center),
+                    decoration: BoxDecoration(
+                      color: scheme.error,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 14,
+                      minHeight: 14,
+                    ),
+                    child: Text(
+                      '$_unreadCount',
+                      style: TextStyle(color: scheme.onError, fontSize: 9),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ),
             ],
           ),
-          IconButton(icon: const Icon(Icons.logout), onPressed: () => _logout(context)),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => _logout(context),
+          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -198,7 +267,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     radius: 24,
                     backgroundColor: scheme.primaryContainer,
                     child: Text(
-                      widget.profile.name.isNotEmpty ? widget.profile.name[0].toUpperCase() : '?',
+                      widget.profile.name.isNotEmpty
+                          ? widget.profile.name[0].toUpperCase()
+                          : '?',
                       style: TextStyle(
                         color: scheme.onPrimaryContainer,
                         fontWeight: FontWeight.w700,
@@ -211,17 +282,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Welcome, ${widget.profile.name}',
-                            style: Theme.of(context).textTheme.headlineSmall),
+                        Text(
+                          'Welcome, ${widget.profile.name}',
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
                         const SizedBox(height: 2),
                         Row(
                           children: [
-                            Icon(Icons.star_rounded, size: 16, color: Colors.amber.shade600),
+                            Icon(
+                              Icons.star_rounded,
+                              size: 16,
+                              color: Colors.amber.shade600,
+                            ),
                             const SizedBox(width: 3),
                             Expanded(
                               child: Text(
                                 '${_worker.rating.toStringAsFixed(1)} · ${_worker.jobsCompleted} jobs · ${_worker.skills.join(', ')}',
-                                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+                                style: TextStyle(
+                                  color: scheme.onSurfaceVariant,
+                                  fontSize: 12,
+                                ),
                                 overflow: TextOverflow.ellipsis,
                                 maxLines: 1,
                               ),
@@ -241,29 +321,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [scheme.primary, scheme.primary.withValues(alpha: 0.75)],
+                    colors: [
+                      scheme.primary,
+                      scheme.primary.withValues(alpha: 0.75),
+                    ],
                   ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _DashboardStat(label: 'Today', value: 'Rs. ${_todayEarnings.toStringAsFixed(0)}', onColor: scheme.onPrimary),
-                    _DashboardStat(label: 'Wallet', value: 'Rs. ${_worker.walletBalance.toStringAsFixed(0)}', onColor: scheme.onPrimary),
-                    _DashboardStat(label: 'Performance', value: '${_worker.performanceScore}/100', onColor: scheme.onPrimary),
+                    _DashboardStat(
+                      label: 'Today',
+                      value: 'Rs. ${_todayEarnings.toStringAsFixed(0)}',
+                      onColor: scheme.onPrimary,
+                    ),
+                    _DashboardStat(
+                      label: 'Wallet',
+                      value: 'Rs. ${_worker.walletBalance.toStringAsFixed(0)}',
+                      onColor: scheme.onPrimary,
+                    ),
+                    _DashboardStat(
+                      label: 'Performance',
+                      value: '${_worker.performanceScore}/100',
+                      onColor: scheme.onPrimary,
+                    ),
                   ],
                 ),
               ).animate().fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0),
               const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: scheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(online ? 'Online — receiving jobs' : 'Offline',
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  title: Text(
+                    online ? 'Online — receiving jobs' : 'Offline',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   secondary: Icon(
                     online ? Icons.wifi_tethering : Icons.wifi_tethering_off,
                     color: online ? Colors.green : scheme.onSurfaceVariant,
@@ -278,7 +378,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
               const SizedBox(height: 20),
               if (activeJob != null) ...[
-                Text('Active job', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Active job',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: 10),
                 Material(
                   color: Colors.transparent,
@@ -293,23 +396,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.build_outlined, color: scheme.onSecondaryContainer),
+                          Icon(
+                            Icons.build_outlined,
+                            color: scheme.onSecondaryContainer,
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(activeJob.problemText,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                        color: scheme.onSecondaryContainer, fontWeight: FontWeight.w600)),
-                                Text(activeJob.status.wire,
-                                    style: TextStyle(color: scheme.onSecondaryContainer.withValues(alpha: 0.8))),
+                                Text(
+                                  activeJob.problemText,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: scheme.onSecondaryContainer,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  activeJob.status.wire,
+                                  style: TextStyle(
+                                    color: scheme.onSecondaryContainer
+                                        .withValues(alpha: 0.8),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                          Icon(Icons.chevron_right, color: scheme.onSecondaryContainer),
+                          Icon(
+                            Icons.chevron_right,
+                            color: scheme.onSecondaryContainer,
+                          ),
                         ],
                       ),
                     ),
@@ -321,7 +439,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   text: 'Go online to see incoming job requests.',
                 ),
               ] else ...[
-                Text('Open jobs matching your skills', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Open jobs matching your skills',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: 10),
                 FutureBuilder<List<Booking>>(
                   future: _openJobsFuture,
@@ -332,69 +453,101 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: Center(child: CircularProgressIndicator()),
                       );
                     }
-                    final jobs = snapshot.data!.where((b) => !_declinedJobIds.contains(b.id)).toList();
+                    final jobs = snapshot.data!
+                        .where((b) => !_declinedJobIds.contains(b.id))
+                        .toList();
                     if (jobs.isEmpty) {
-                      return _EmptyHint(icon: Icons.inbox_outlined, text: 'No open jobs right now.');
+                      return _EmptyHint(
+                        icon: Icons.inbox_outlined,
+                        text: 'No open jobs right now.',
+                      );
                     }
                     return Column(
                       children: jobs
-                          .map((b) => Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: Card(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(14),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(b.problemText, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          children: [
-                                            Icon(Icons.location_on_outlined, size: 14, color: scheme.onSurfaceVariant),
-                                            const SizedBox(width: 4),
-                                            Expanded(
-                                              child: Text(b.addressText,
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13)),
-                                            ),
-                                          ],
+                          .map(
+                            (b) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Card(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(14),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        b.problemText,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
                                         ),
-                                        const SizedBox(height: 10),
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.end,
-                                          children: [
-                                            IconButton(
-                                              icon: const Icon(Icons.close),
-                                              tooltip: 'Decline — hide from my list',
-                                              onPressed: () => setState(() => _declinedJobIds.add(b.id)),
-                                            ),
-                                            IconButton(
-                                              icon: const Icon(Icons.chat_bubble_outline),
-                                              tooltip: 'Ask the customer a question before offering',
-                                              onPressed: () => Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (_) => ChatScreen(
-                                                    bookingId: b.id,
-                                                    senderId: widget.profile.id,
-                                                    senderRole: 'worker',
-                                                    threadWorkerId: widget.profile.id,
-                                                  ),
-                                                ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.location_on_outlined,
+                                            size: 14,
+                                            color: scheme.onSurfaceVariant,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              b.addressText,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                color: scheme.onSurfaceVariant,
+                                                fontSize: 13,
                                               ),
                                             ),
-                                            const SizedBox(width: 4),
-                                            FilledButton(
-                                              onPressed: () => _sendOffer(b),
-                                              child: const Text('Offer'),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.end,
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(Icons.close),
+                                            tooltip:
+                                                'Decline — hide from my list',
+                                            onPressed: () => setState(
+                                              () => _declinedJobIds.add(b.id),
                                             ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(
+                                              Icons.chat_bubble_outline,
+                                            ),
+                                            tooltip:
+                                                'Ask the customer a question before offering',
+                                            onPressed: () =>
+                                                Navigator.of(context).push(
+                                                  MaterialPageRoute(
+                                                    builder: (_) => ChatScreen(
+                                                      bookingId: b.id,
+                                                      senderId:
+                                                          widget.profile.id,
+                                                      senderRole: 'worker',
+                                                      threadWorkerId:
+                                                          widget.profile.id,
+                                                    ),
+                                                  ),
+                                                ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          FilledButton(
+                                            onPressed: () => _sendOffer(b),
+                                            child: const Text('Offer'),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ))
+                              ),
+                            ),
+                          )
                           .toList(),
                     );
                   },
@@ -440,14 +593,31 @@ class _DashboardStat extends StatelessWidget {
   final String value;
   final Color onColor;
 
-  const _DashboardStat({required this.label, required this.value, required this.onColor});
+  const _DashboardStat({
+    required this.label,
+    required this.value,
+    required this.onColor,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value, style: TextStyle(color: onColor, fontWeight: FontWeight.w700, fontSize: 16)),
-        Text(label, style: TextStyle(color: onColor.withValues(alpha: 0.85), fontSize: 12)),
+        Text(
+          value,
+          style: TextStyle(
+            color: onColor,
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            color: onColor.withValues(alpha: 0.85),
+            fontSize: 12,
+          ),
+        ),
       ],
     );
   }

@@ -6,6 +6,7 @@ class AppServices {
   AppServices._();
 
   static final Client client = HandyGoConfig.buildClient();
+  static final Realtime realtime = Realtime(client);
   static final AuthService auth = AuthService(client);
   static final ProfileRepository profiles = ProfileRepository(client);
   static final Databases databases = Databases(client);
@@ -13,9 +14,13 @@ class AppServices {
   static final BookingRepository bookings = BookingRepository(client);
   static final SosRepository sos = SosRepository(client);
   static final FraudRepository fraud = FraudRepository(client);
-  static final NotificationRepository notifications = NotificationRepository(client);
+  static final NotificationRepository notifications = NotificationRepository(
+    client,
+  );
   static final CategoryRepository categories = CategoryRepository(client);
-  static final TransactionRepository transactions = TransactionRepository(client);
+  static final TransactionRepository transactions = TransactionRepository(
+    client,
+  );
   static final MessageRepository messages = MessageRepository(client);
   static final MediaRepository media = MediaRepository(client);
 

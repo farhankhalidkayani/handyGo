@@ -1,3 +1,4 @@
+import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:handygo_shared/handygo_shared.dart';
@@ -21,12 +22,26 @@ class _WalletScreenState extends State<WalletScreen> {
   bool _withdrawing = false;
   String? _error;
   String? _message;
+  RealtimeSubscription? _profileSub;
 
   @override
   void initState() {
     super.initState();
     _worker = widget.worker;
     _loadTip();
+    _profileSub = AppServices.profiles.subscribeToWorkerProfiles();
+    _profileSub!.stream.listen((event) {
+      if (!mounted) return;
+      final updated = WorkerProfile.fromMap(event.payload);
+      if (updated.id != _worker.id) return;
+      setState(() => _worker = updated);
+    });
+  }
+
+  @override
+  void dispose() {
+    _profileSub?.close();
+    super.dispose();
   }
 
   Future<void> _loadTip() async {
@@ -46,14 +61,22 @@ class _WalletScreenState extends State<WalletScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Withdraw Rs. ${_worker.walletBalance.toStringAsFixed(0)}?'),
+        title: Text(
+          'Withdraw Rs. ${_worker.walletBalance.toStringAsFixed(0)}?',
+        ),
         content: const Text(
           'A real payout method (bank transfer/JazzCash/etc.) is out of scope for this build — '
           'this simulates an instant payout, same as how payment itself is simulated as COD.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Withdraw')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Withdraw'),
+          ),
         ],
       ),
     );
@@ -114,34 +137,66 @@ class _WalletScreenState extends State<WalletScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.account_balance_wallet_outlined, color: scheme.onPrimary.withValues(alpha: 0.9), size: 18),
+                    Icon(
+                      Icons.account_balance_wallet_outlined,
+                      color: scheme.onPrimary.withValues(alpha: 0.9),
+                      size: 18,
+                    ),
                     const SizedBox(width: 6),
-                    Text('Available balance',
-                        style: TextStyle(color: scheme.onPrimary.withValues(alpha: 0.9), fontSize: 13)),
+                    Text(
+                      'Available balance',
+                      style: TextStyle(
+                        color: scheme.onPrimary.withValues(alpha: 0.9),
+                        fontSize: 13,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text('Rs. ${_worker.walletBalance.toStringAsFixed(0)}',
-                    style: TextStyle(color: scheme.onPrimary, fontWeight: FontWeight.w800, fontSize: 36)),
+                Text(
+                  'Rs. ${_worker.walletBalance.toStringAsFixed(0)}',
+                  style: TextStyle(
+                    color: scheme.onPrimary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 36,
+                  ),
+                ),
                 const SizedBox(height: 10),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: scheme.onPrimary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Text('Pending: Rs. ${_worker.pendingBalance.toStringAsFixed(0)}',
-                      style: TextStyle(color: scheme.onPrimary, fontSize: 12, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    'Pending: Rs. ${_worker.pendingBalance.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      color: scheme.onPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ],
             ),
           ).animate().fadeIn(duration: 300.ms),
           const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: (_withdrawing || _worker.walletBalance <= 0) ? null : _withdraw,
+            onPressed: (_withdrawing || _worker.walletBalance <= 0)
+                ? null
+                : _withdraw,
             icon: _withdrawing
                 ? const SizedBox(
-                    height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
                 : const Icon(Icons.arrow_circle_down_outlined),
             label: const Text('Withdraw'),
           ),
@@ -149,12 +204,27 @@ class _WalletScreenState extends State<WalletScreen> {
             const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+              ),
               child: Row(
                 children: [
-                  const Icon(Icons.check_circle_outline, color: Colors.green, size: 18),
+                  const Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.green,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(_message!, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600))),
+                  Expanded(
+                    child: Text(
+                      _message!,
+                      style: const TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -168,20 +238,42 @@ class _WalletScreenState extends State<WalletScreen> {
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(18)),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(18),
+            ),
             child: Row(
               children: [
                 Expanded(
-                  child: _StatColumn(icon: Icons.speed_outlined, label: 'Performance', value: '${_worker.performanceScore}/100'),
+                  child: _StatColumn(
+                    icon: Icons.speed_outlined,
+                    label: 'Performance',
+                    value: '${_worker.performanceScore}/100',
+                  ),
                 ),
-                Container(width: 1, height: 36, color: scheme.outlineVariant.withValues(alpha: 0.5)),
+                Container(
+                  width: 1,
+                  height: 36,
+                  color: scheme.outlineVariant.withValues(alpha: 0.5),
+                ),
                 Expanded(
                   child: _StatColumn(
-                      icon: Icons.star_outline, label: 'Rating', value: _worker.rating.toStringAsFixed(1)),
+                    icon: Icons.star_outline,
+                    label: 'Rating',
+                    value: _worker.rating.toStringAsFixed(1),
+                  ),
                 ),
-                Container(width: 1, height: 36, color: scheme.outlineVariant.withValues(alpha: 0.5)),
+                Container(
+                  width: 1,
+                  height: 36,
+                  color: scheme.outlineVariant.withValues(alpha: 0.5),
+                ),
                 Expanded(
-                  child: _StatColumn(icon: Icons.task_alt_outlined, label: 'Jobs done', value: '${_worker.jobsCompleted}'),
+                  child: _StatColumn(
+                    icon: Icons.task_alt_outlined,
+                    label: 'Jobs done',
+                    value: '${_worker.jobsCompleted}',
+                  ),
                 ),
               ],
             ),
@@ -192,13 +284,24 @@ class _WalletScreenState extends State<WalletScreen> {
           else if (_tip != null)
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: scheme.primaryContainer, borderRadius: BorderRadius.circular(18)),
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer,
+                borderRadius: BorderRadius.circular(18),
+              ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.lightbulb_outline, color: scheme.onPrimaryContainer),
+                  Icon(
+                    Icons.lightbulb_outline,
+                    color: scheme.onPrimaryContainer,
+                  ),
                   const SizedBox(width: 10),
-                  Expanded(child: Text(_tip!, style: TextStyle(color: scheme.onPrimaryContainer))),
+                  Expanded(
+                    child: Text(
+                      _tip!,
+                      style: TextStyle(color: scheme.onPrimaryContainer),
+                    ),
+                  ),
                 ],
               ),
             ).animate().fadeIn(duration: 300.ms),
@@ -213,7 +316,11 @@ class _StatColumn extends StatelessWidget {
   final String label;
   final String value;
 
-  const _StatColumn({required this.icon, required this.label, required this.value});
+  const _StatColumn({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -222,8 +329,14 @@ class _StatColumn extends StatelessWidget {
       children: [
         Icon(icon, size: 18, color: scheme.primary),
         const SizedBox(height: 6),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-        Text(label, style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 11)),
+        Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
+        Text(
+          label,
+          style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 11),
+        ),
       ],
     );
   }
