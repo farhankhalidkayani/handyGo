@@ -97,6 +97,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: Text(widget.threadWorkerId != null ? 'Ask the customer' : 'Chat')),
       body: Column(
@@ -120,26 +121,38 @@ class _ChatScreenState extends State<ChatScreen> {
                             color: m.aiFlagged
                                 ? Colors.red.withValues(alpha: 0.15)
                                 : isMine
-                                    ? Theme.of(context).colorScheme.primaryContainer
-                                    : Theme.of(context).colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(12),
+                                    ? scheme.primaryContainer
+                                    : scheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.only(
+                              topLeft: const Radius.circular(16),
+                              topRight: const Radius.circular(16),
+                              bottomLeft: Radius.circular(isMine ? 16 : 4),
+                              bottomRight: Radius.circular(isMine ? 4 : 16),
+                            ),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(m.text),
+                              Text(m.text, style: TextStyle(color: isMine ? scheme.onPrimaryContainer : scheme.onSurfaceVariant)),
                               if (!isMine && m.translatedText != null && m.translatedText != m.text) ...[
                                 const SizedBox(height: 4),
                                 Text(
                                   m.translatedText!,
-                                  style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
+                                  style: TextStyle(fontStyle: FontStyle.italic, fontSize: 12, color: scheme.onSurfaceVariant.withValues(alpha: 0.8)),
                                 ),
                               ],
                               if (m.aiFlagged) ...[
                                 const SizedBox(height: 4),
-                                Text(
-                                  '⚠ ${m.flagReason ?? "flagged for review"}',
-                                  style: const TextStyle(fontSize: 11, color: Colors.red),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.warning_amber_rounded, size: 13, color: Colors.red),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      m.flagReason ?? 'flagged for review',
+                                      style: const TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ],
@@ -149,19 +162,32 @@ class _ChatScreenState extends State<ChatScreen> {
                     },
                   ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _textController,
-                    decoration: const InputDecoration(hintText: 'Message... (never share payment details here)'),
-                    onSubmitted: (_) => _send(),
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              border: Border(top: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.4))),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _textController,
+                      decoration: const InputDecoration(hintText: 'Message... (never share payment details here)'),
+                      onSubmitted: (_) => _send(),
+                    ),
                   ),
-                ),
-                IconButton(icon: const Icon(Icons.send), onPressed: _sending ? null : _send),
-              ],
+                  const SizedBox(width: 8),
+                  IconButton.filled(
+                    icon: _sending
+                        ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.arrow_upward),
+                    onPressed: _sending ? null : _send,
+                  ),
+                ],
+              ),
             ),
           ),
         ],

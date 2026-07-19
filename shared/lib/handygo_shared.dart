@@ -2,6 +2,7 @@ library handygo_shared;
 
 export 'src/booking_status.dart';
 export 'src/appwrite_config.dart';
+export 'src/app_theme.dart';
 export 'src/auth_service.dart';
 export 'src/profile_repository.dart';
 export 'src/category_repository.dart';

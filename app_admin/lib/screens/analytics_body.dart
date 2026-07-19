@@ -2,9 +2,18 @@ import 'dart:convert';
 
 import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:handygo_shared/handygo_shared.dart';
 
 import '../services/app_services.dart';
+
+const _statCardMeta = {
+  'Bookings': Icons.calendar_today_outlined,
+  'Completed': Icons.check_circle_outline,
+  'Cancelled': Icons.cancel_outlined,
+  'Revenue': Icons.payments_outlined,
+  'Avg rating': Icons.star_outline,
+};
 
 /// Plan §8.3/A7: "Demand forecast, revenue analysis, worker-shortage, cancellation reasons".
 /// Reads `analytics_daily` (populated by eventRouter's scheduled scoreEngine+analyticsRollup
@@ -96,20 +105,24 @@ class _AnalyticsBodyState extends State<AnalyticsBody> {
         ),
         if ((latest['aiNarrative'] as String?)?.isNotEmpty ?? false) ...[
           const SizedBox(height: 16),
-          Card(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.auto_awesome, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(latest['aiNarrative'] as String)),
-                ],
-              ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(18),
             ),
-          ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.auto_awesome, size: 18, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(latest['aiNarrative'] as String,
+                      style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer)),
+                ),
+              ],
+            ),
+          ).animate().fadeIn(duration: 300.ms),
         ],
         if (_recentDays.length > 1) ...[
           const SizedBox(height: 24),
@@ -148,45 +161,73 @@ class _AnalyticsBodyState extends State<AnalyticsBody> {
         ],
         const SizedBox(height: 24),
         Text('Demand by category', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         if (demandByCategory.isEmpty)
-          const Text('No bookings recorded today.')
+          Text('No bookings recorded today.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant))
         else
-          ...demandByCategory.entries.map((e) {
-            final name = _categoryNames[e.key] ?? e.key;
-            final count = e.value as int;
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  SizedBox(width: 120, child: Text(name)),
-                  Expanded(
-                    child: LinearProgressIndicator(
-                      value: maxDemand == 0 ? 0 : count / maxDemand,
-                      minHeight: 12,
-                    ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Column(
+              children: demandByCategory.entries.map((e) {
+                final name = _categoryNames[e.key] ?? e.key;
+                final count = e.value as int;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      SizedBox(width: 110, child: Text(name, style: const TextStyle(fontWeight: FontWeight.w600))),
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: LinearProgressIndicator(
+                            value: maxDemand == 0 ? 0 : count / maxDemand,
+                            minHeight: 10,
+                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text('$count', style: const TextStyle(fontWeight: FontWeight.w700)),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Text('$count'),
-                ],
-              ),
-            );
-          }),
+                );
+              }).toList(),
+            ),
+          ),
         const SizedBox(height: 24),
         Text('Cancellation reasons', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         if (cancellationReasons.isEmpty)
-          const Text('No cancellations recorded today.')
+          Text('No cancellations recorded today.',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant))
         else
-          ...cancellationReasons.entries.map((e) => Text('${e.key}: ${e.value}')),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: cancellationReasons.entries
+                .map((e) => Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text('${e.key}: ${e.value}', style: const TextStyle(fontSize: 12)),
+                    ))
+                .toList(),
+          ),
         const SizedBox(height: 24),
         Text('Worker-shortage areas', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Builder(builder: (context) {
           final shortageAreas =
               Map<String, dynamic>.from(jsonDecode(latest['workerShortageAreas'] as String? ?? '{}'));
           if (shortageAreas.isEmpty) {
-            return const Text('No shortage areas detected today.');
+            return Text('No shortage areas detected today.',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant));
           }
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -194,13 +235,21 @@ class _AnalyticsBodyState extends State<AnalyticsBody> {
               final area = Map<String, dynamic>.from(raw as Map);
               final lat = (area['lat'] as num).toStringAsFixed(2);
               final lng = (area['lng'] as num).toStringAsFixed(2);
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 child: Row(
                   children: [
-                    const Icon(Icons.warning_amber, color: Colors.orange, size: 16),
-                    const SizedBox(width: 6),
-                    Text('~$lat, $lng — ${area['demand']} booking(s), no online workers nearby'),
+                    Icon(Icons.warning_amber, color: Colors.orange.shade800, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text('~$lat, $lng — ${area['demand']} booking(s), no online workers nearby',
+                          style: TextStyle(color: Colors.orange.shade800, fontSize: 13)),
+                    ),
                   ],
                 ),
               );
@@ -220,17 +269,23 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(value, style: Theme.of(context).textTheme.headlineSmall),
-            Text(label, style: const TextStyle(color: Colors.grey)),
-          ],
-        ),
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: 140,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(_statCardMeta[label] ?? Icons.info_outline, size: 18, color: scheme.primary),
+          const SizedBox(height: 10),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
+          Text(label, style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12)),
+        ],
       ),
     );
   }
@@ -248,8 +303,13 @@ class _TrendChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final maxValue = values.fold<double>(0, (max, v) => v > max ? v : max);
-    return SizedBox(
-      height: 80,
+    return Container(
+      height: 96,
+      padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: values.map((v) {
@@ -264,8 +324,12 @@ class _TrendChart extends StatelessWidget {
                   alignment: Alignment.bottomCenter,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.7),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [color.withValues(alpha: 0.9), color.withValues(alpha: 0.5)],
+                      ),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
                     ),
                   ),
                 ),

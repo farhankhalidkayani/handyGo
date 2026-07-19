@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:handygo_shared/handygo_shared.dart';
 
 import '../services/app_services.dart';
@@ -91,68 +92,139 @@ class _WalletScreenState extends State<WalletScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Wallet')),
       body: ListView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [scheme.primary, scheme.primary.withValues(alpha: 0.7)],
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.account_balance_wallet_outlined, color: scheme.onPrimary.withValues(alpha: 0.9), size: 18),
+                    const SizedBox(width: 6),
+                    Text('Available balance',
+                        style: TextStyle(color: scheme.onPrimary.withValues(alpha: 0.9), fontSize: 13)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text('Rs. ${_worker.walletBalance.toStringAsFixed(0)}',
+                    style: TextStyle(color: scheme.onPrimary, fontWeight: FontWeight.w800, fontSize: 36)),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: scheme.onPrimary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text('Pending: Rs. ${_worker.pendingBalance.toStringAsFixed(0)}',
+                      style: TextStyle(color: scheme.onPrimary, fontSize: 12, fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+          ).animate().fadeIn(duration: 300.ms),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: (_withdrawing || _worker.walletBalance <= 0) ? null : _withdraw,
+            icon: _withdrawing
+                ? const SizedBox(
+                    height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.arrow_circle_down_outlined),
+            label: const Text('Withdraw'),
+          ),
+          if (_message != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
+              child: Row(
                 children: [
-                  const Text('Available balance', style: TextStyle(color: Colors.grey)),
-                  Text('Rs. ${_worker.walletBalance.toStringAsFixed(0)}',
-                      style: Theme.of(context).textTheme.headlineMedium),
-                  const SizedBox(height: 8),
-                  Text('Pending: Rs. ${_worker.pendingBalance.toStringAsFixed(0)}'),
+                  const Icon(Icons.check_circle_outline, color: Colors.green, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(_message!, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600))),
                 ],
               ),
             ),
+          ],
+          if (_error != null) ...[
+            const SizedBox(height: 10),
+            Text(_error!, style: TextStyle(color: scheme.error)),
+          ],
+          const SizedBox(height: 28),
+          Text('Performance', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(18)),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _StatColumn(icon: Icons.speed_outlined, label: 'Performance', value: '${_worker.performanceScore}/100'),
+                ),
+                Container(width: 1, height: 36, color: scheme.outlineVariant.withValues(alpha: 0.5)),
+                Expanded(
+                  child: _StatColumn(
+                      icon: Icons.star_outline, label: 'Rating', value: _worker.rating.toStringAsFixed(1)),
+                ),
+                Container(width: 1, height: 36, color: scheme.outlineVariant.withValues(alpha: 0.5)),
+                Expanded(
+                  child: _StatColumn(icon: Icons.task_alt_outlined, label: 'Jobs done', value: '${_worker.jobsCompleted}'),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 16),
-          FilledButton(
-            onPressed: (_withdrawing || _worker.walletBalance <= 0) ? null : _withdraw,
-            child: _withdrawing
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator())
-                : const Text('Withdraw'),
-          ),
-          if (_message != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(_message!, style: const TextStyle(color: Colors.green)),
-            ),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(_error!, style: const TextStyle(color: Colors.red)),
-            ),
-          const SizedBox(height: 32),
-          Text('Performance', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Text('Score: ${_worker.performanceScore}/100'),
-          Text('Rating: ${_worker.rating.toStringAsFixed(1)} · Jobs completed: ${_worker.jobsCompleted}'),
-          const SizedBox(height: 12),
           if (_loadingTip)
             const Center(child: CircularProgressIndicator())
           else if (_tip != null)
-            Card(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.lightbulb_outline),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(_tip!)),
-                  ],
-                ),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: scheme.primaryContainer, borderRadius: BorderRadius.circular(18)),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.lightbulb_outline, color: scheme.onPrimaryContainer),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(_tip!, style: TextStyle(color: scheme.onPrimaryContainer))),
+                ],
               ),
-            ),
+            ).animate().fadeIn(duration: 300.ms),
         ],
       ),
+    );
+  }
+}
+
+class _StatColumn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _StatColumn({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        Icon(icon, size: 18, color: scheme.primary),
+        const SizedBox(height: 6),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+        Text(label, style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 11)),
+      ],
     );
   }
 }

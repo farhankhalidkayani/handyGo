@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:handygo_shared/handygo_shared.dart';
 
 import '../services/app_services.dart';
@@ -144,6 +145,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final online = _worker.availability == 'online';
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard'),
@@ -170,14 +173,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   right: 8,
                   child: Container(
                     padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: scheme.error, shape: BoxShape.circle),
                     constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
-                    child: Text('$_unreadCount', style: const TextStyle(color: Colors.white, fontSize: 9), textAlign: TextAlign.center),
+                    child: Text('$_unreadCount',
+                        style: TextStyle(color: scheme.onError, fontSize: 9), textAlign: TextAlign.center),
                   ),
                 ),
             ],
           ),
           IconButton(icon: const Icon(Icons.logout), onPressed: () => _logout(context)),
+          const SizedBox(width: 8),
         ],
       ),
       body: FutureBuilder<Booking?>(
@@ -185,92 +190,208 @@ class _DashboardScreenState extends State<DashboardScreen> {
         builder: (context, activeSnapshot) {
           final activeJob = activeSnapshot.data;
           return ListView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(20),
             children: [
-              Text('Welcome, ${widget.profile.name}', style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 8),
-              Text('Skills: ${_worker.skills.join(', ')}'),
-              Text('Rating: ${_worker.rating.toStringAsFixed(1)} · Jobs completed: ${_worker.jobsCompleted}'),
-              const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _DashboardStat(label: 'Today', value: 'Rs. ${_todayEarnings.toStringAsFixed(0)}'),
-                      _DashboardStat(label: 'Wallet', value: 'Rs. ${_worker.walletBalance.toStringAsFixed(0)}'),
-                      _DashboardStat(label: 'Performance', value: '${_worker.performanceScore}/100'),
-                    ],
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: scheme.primaryContainer,
+                    child: Text(
+                      widget.profile.name.isNotEmpty ? widget.profile.name[0].toUpperCase() : '?',
+                      style: TextStyle(
+                        color: scheme.onPrimaryContainer,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Welcome, ${widget.profile.name}',
+                            style: Theme.of(context).textTheme.headlineSmall),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Icon(Icons.star_rounded, size: 16, color: Colors.amber.shade600),
+                            const SizedBox(width: 3),
+                            Expanded(
+                              child: Text(
+                                '${_worker.rating.toStringAsFixed(1)} · ${_worker.jobsCompleted} jobs · ${_worker.skills.join(', ')}',
+                                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ).animate().fadeIn(duration: 300.ms),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [scheme.primary, scheme.primary.withValues(alpha: 0.75)],
                   ),
                 ),
-              ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _DashboardStat(label: 'Today', value: 'Rs. ${_todayEarnings.toStringAsFixed(0)}', onColor: scheme.onPrimary),
+                    _DashboardStat(label: 'Wallet', value: 'Rs. ${_worker.walletBalance.toStringAsFixed(0)}', onColor: scheme.onPrimary),
+                    _DashboardStat(label: 'Performance', value: '${_worker.performanceScore}/100', onColor: scheme.onPrimary),
+                  ],
+                ),
+              ).animate().fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0),
               const SizedBox(height: 16),
-              SwitchListTile(
-                title: const Text('Online'),
-                value: _worker.availability == 'online',
-                onChanged: _togglingAvailability ? null : _toggleAvailability,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(online ? 'Online — receiving jobs' : 'Offline',
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  secondary: Icon(
+                    online ? Icons.wifi_tethering : Icons.wifi_tethering_off,
+                    color: online ? Colors.green : scheme.onSurfaceVariant,
+                  ),
+                  value: online,
+                  onChanged: _togglingAvailability ? null : _toggleAvailability,
+                ),
               ),
-              if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
-              const SizedBox(height: 16),
+              if (_error != null) ...[
+                const SizedBox(height: 8),
+                Text(_error!, style: TextStyle(color: scheme.error)),
+              ],
+              const SizedBox(height: 20),
               if (activeJob != null) ...[
-                const Text('Active job', style: TextStyle(fontWeight: FontWeight.bold)),
-                Card(
-                  child: ListTile(
-                    title: Text(activeJob.problemText),
-                    subtitle: Text(activeJob.status.wire),
-                    trailing: const Icon(Icons.chevron_right),
+                Text('Active job', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 10),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(18),
                     onTap: () => _openActiveJob(activeJob),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: scheme.secondaryContainer,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.build_outlined, color: scheme.onSecondaryContainer),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(activeJob.problemText,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                        color: scheme.onSecondaryContainer, fontWeight: FontWeight.w600)),
+                                Text(activeJob.status.wire,
+                                    style: TextStyle(color: scheme.onSecondaryContainer.withValues(alpha: 0.8))),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.chevron_right, color: scheme.onSecondaryContainer),
+                        ],
+                      ),
+                    ),
                   ),
+                ).animate().fadeIn(duration: 300.ms),
+              ] else if (!online) ...[
+                _EmptyHint(
+                  icon: Icons.wifi_tethering_off,
+                  text: 'Go online to see incoming job requests.',
                 ),
-              ] else if (_worker.availability != 'online') ...[
-                const Text('Go online to see incoming job requests.'),
               ] else ...[
-                const Text('Open jobs matching your skills', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text('Open jobs matching your skills', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 10),
                 FutureBuilder<List<Booking>>(
                   future: _openJobsFuture,
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
                       return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
+                        padding: EdgeInsets.symmetric(vertical: 24),
                         child: Center(child: CircularProgressIndicator()),
                       );
                     }
                     final jobs = snapshot.data!.where((b) => !_declinedJobIds.contains(b.id)).toList();
-                    if (jobs.isEmpty) return const Text('No open jobs right now.');
+                    if (jobs.isEmpty) {
+                      return _EmptyHint(icon: Icons.inbox_outlined, text: 'No open jobs right now.');
+                    }
                     return Column(
                       children: jobs
-                          .map((b) => Card(
-                                child: ListTile(
-                                  title: Text(b.problemText),
-                                  subtitle: Text(b.addressText),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.close),
-                                        tooltip: 'Decline — hide from my list',
-                                        onPressed: () => setState(() => _declinedJobIds.add(b.id)),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.chat_bubble_outline),
-                                        tooltip: 'Ask the customer a question before offering',
-                                        onPressed: () => Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (_) => ChatScreen(
-                                              bookingId: b.id,
-                                              senderId: widget.profile.id,
-                                              senderRole: 'worker',
-                                              threadWorkerId: widget.profile.id,
+                          .map((b) => Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: Card(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(14),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(b.problemText, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Icon(Icons.location_on_outlined, size: 14, color: scheme.onSurfaceVariant),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(b.addressText,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13)),
                                             ),
-                                          ),
+                                          ],
                                         ),
-                                      ),
-                                      FilledButton(
-                                        onPressed: () => _sendOffer(b),
-                                        child: const Text('Offer'),
-                                      ),
-                                    ],
+                                        const SizedBox(height: 10),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.end,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.close),
+                                              tooltip: 'Decline — hide from my list',
+                                              onPressed: () => setState(() => _declinedJobIds.add(b.id)),
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.chat_bubble_outline),
+                                              tooltip: 'Ask the customer a question before offering',
+                                              onPressed: () => Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (_) => ChatScreen(
+                                                    bookingId: b.id,
+                                                    senderId: widget.profile.id,
+                                                    senderRole: 'worker',
+                                                    threadWorkerId: widget.profile.id,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            FilledButton(
+                                              onPressed: () => _sendOffer(b),
+                                              child: const Text('Offer'),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ))
@@ -287,18 +408,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
+class _EmptyHint extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _EmptyHint({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 32, color: scheme.onSurfaceVariant),
+          const SizedBox(height: 8),
+          Text(text, style: TextStyle(color: scheme.onSurfaceVariant)),
+        ],
+      ),
+    );
+  }
+}
+
 class _DashboardStat extends StatelessWidget {
   final String label;
   final String value;
+  final Color onColor;
 
-  const _DashboardStat({required this.label, required this.value});
+  const _DashboardStat({required this.label, required this.value, required this.onColor});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value, style: Theme.of(context).textTheme.titleMedium),
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+        Text(value, style: TextStyle(color: onColor, fontWeight: FontWeight.w700, fontSize: 16)),
+        Text(label, style: TextStyle(color: onColor.withValues(alpha: 0.85), fontSize: 12)),
       ],
     );
   }

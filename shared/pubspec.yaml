@@ -9,6 +9,11 @@ environment:
 dependencies:
   appwrite: ^25.3.0
   web: ^1.0.0
+  flutter:
+    sdk: flutter
+  google_fonts: ^6.2.1
 
 dev_dependencies:
   test: ^1.24.0
+  flutter_test:
+    sdk: flutter

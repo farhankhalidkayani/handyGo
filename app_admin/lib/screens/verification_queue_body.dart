@@ -95,17 +95,21 @@ class _VerificationQueueBodyState extends State<VerificationQueueBody> {
   }
 
   Widget _docThumbnail(String label, String? fileId) {
+    final scheme = Theme.of(context).colorScheme;
     if (fileId == null) {
       return Column(
         children: [
           Container(
             width: 80,
             height: 80,
-            decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300)),
-            child: const Icon(Icons.image_not_supported_outlined, color: Colors.grey),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(Icons.image_not_supported_outlined, color: scheme.onSurfaceVariant),
           ),
-          const SizedBox(height: 4),
-          Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          const SizedBox(height: 6),
+          Text(label, style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
         ],
       );
     }
@@ -115,11 +119,14 @@ class _VerificationQueueBodyState extends State<VerificationQueueBody> {
           onTap: () => showDialog(
             context: context,
             builder: (context) => Dialog(
-              child: Image.network(AppServices.media.viewUrl(fileId)),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.network(AppServices.media.viewUrl(fileId)),
+              ),
             ),
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(14),
             child: Image.network(
               AppServices.media.viewUrl(fileId),
               width: 80,
@@ -128,26 +135,27 @@ class _VerificationQueueBodyState extends State<VerificationQueueBody> {
               errorBuilder: (context, error, stack) => Container(
                 width: 80,
                 height: 80,
-                color: Colors.grey.shade200,
-                child: const Icon(Icons.broken_image_outlined, color: Colors.grey),
+                color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                child: Icon(Icons.broken_image_outlined, color: scheme.onSurfaceVariant),
               ),
             ),
           ),
         ),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        const SizedBox(height: 6),
+        Text(label, style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
       ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       children: [
         if (_actionError != null)
           Padding(
-            padding: const EdgeInsets.all(8),
-            child: Text(_actionError!, style: const TextStyle(color: Colors.red)),
+            padding: const EdgeInsets.all(12),
+            child: Text(_actionError!, style: TextStyle(color: scheme.error)),
           ),
         Expanded(
           child: FutureBuilder<List<WorkerProfile>>(
@@ -158,57 +166,100 @@ class _VerificationQueueBodyState extends State<VerificationQueueBody> {
               }
               final pending = snapshot.data!;
               if (pending.isEmpty) {
-                return const Center(child: Text('No workers awaiting review.'));
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.task_alt_outlined, size: 40, color: scheme.onSurfaceVariant),
+                      const SizedBox(height: 10),
+                      Text('No workers awaiting review.', style: TextStyle(color: scheme.onSurfaceVariant)),
+                    ],
+                  ),
+                );
               }
               return ListView.builder(
+                padding: const EdgeInsets.all(16),
                 itemCount: pending.length,
                 itemBuilder: (context, i) {
                   final w = pending[i];
-                  return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Skills: ${w.skills.join(', ')}',
-                              style: const TextStyle(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              _docThumbnail('CNIC front', w.cnicFrontUrl),
-                              _docThumbnail('CNIC back', w.cnicBackUrl),
-                              _docThumbnail('Selfie', w.selfieUrl),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              FilledButton(
-                                onPressed: () => _decide(w, 'approved'),
-                                child: const Text('Approve'),
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 14),
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 18,
+                              backgroundColor: scheme.primaryContainer,
+                              child: Icon(Icons.person_outline, color: scheme.onPrimaryContainer, size: 18),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: w.skills
+                                    .map((s) => Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: scheme.secondaryContainer,
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          child: Text(s,
+                                              style: TextStyle(
+                                                  color: scheme.onSecondaryContainer,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600)),
+                                        ))
+                                    .toList(),
                               ),
-                              OutlinedButton(
-                                onPressed: () => _decide(w, 'rejected'),
-                                child: const Text('Reject'),
-                              ),
-                              OutlinedButton(
-                                style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
-                                onPressed: () => _decide(w, 'suspended'),
-                                child: const Text('Suspend'),
-                              ),
-                              OutlinedButton.icon(
-                                onPressed: () => _requestMoreInfo(w),
-                                icon: const Icon(Icons.help_outline, size: 16),
-                                label: const Text('Request more info'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _docThumbnail('CNIC front', w.cnicFrontUrl),
+                            _docThumbnail('CNIC back', w.cnicBackUrl),
+                            _docThumbnail('Selfie', w.selfieUrl),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            FilledButton.icon(
+                              onPressed: () => _decide(w, 'approved'),
+                              icon: const Icon(Icons.check, size: 18),
+                              label: const Text('Approve'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: () => _decide(w, 'rejected'),
+                              icon: const Icon(Icons.close, size: 18),
+                              label: const Text('Reject'),
+                            ),
+                            OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
+                              onPressed: () => _decide(w, 'suspended'),
+                              icon: const Icon(Icons.pause_circle_outline, size: 18),
+                              label: const Text('Suspend'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: () => _requestMoreInfo(w),
+                              icon: const Icon(Icons.help_outline, size: 18),
+                              label: const Text('Request more info'),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   );
                 },

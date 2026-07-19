@@ -77,22 +77,48 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Notifications')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _notifications.isEmpty
-              ? const Center(child: Text('No notifications yet.'))
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.notifications_none, size: 40, color: scheme.onSurfaceVariant),
+                      const SizedBox(height: 10),
+                      Text('No notifications yet.', style: TextStyle(color: scheme.onSurfaceVariant)),
+                    ],
+                  ),
+                )
               : ListView.builder(
+                  padding: const EdgeInsets.all(12),
                   itemCount: _notifications.length,
                   itemBuilder: (context, i) {
                     final n = _notifications[i];
-                    return ListTile(
-                      leading: Icon(n.read ? Icons.notifications_none : Icons.notifications_active,
-                          color: n.read ? Colors.grey : Theme.of(context).colorScheme.primary),
-                      title: Text(n.title, style: TextStyle(fontWeight: n.read ? FontWeight.normal : FontWeight.bold)),
-                      subtitle: n.body != null && n.body!.isNotEmpty ? Text(n.body!) : null,
-                      onTap: () => _tap(n),
+                    return Container(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      decoration: BoxDecoration(
+                        color: n.read ? Colors.transparent : scheme.primaryContainer.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: ListTile(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        leading: CircleAvatar(
+                          backgroundColor: n.read ? scheme.surfaceContainerHighest : scheme.primary,
+                          child: Icon(
+                            n.read ? Icons.notifications_none : Icons.notifications_active,
+                            size: 18,
+                            color: n.read ? scheme.onSurfaceVariant : scheme.onPrimary,
+                          ),
+                        ),
+                        title: Text(n.title, style: TextStyle(fontWeight: n.read ? FontWeight.w500 : FontWeight.w700)),
+                        subtitle: n.body != null && n.body!.isNotEmpty ? Text(n.body!) : null,
+                        trailing: n.bookingId != null ? const Icon(Icons.chevron_right) : null,
+                        onTap: () => _tap(n),
+                      ),
                     );
                   },
                 ),

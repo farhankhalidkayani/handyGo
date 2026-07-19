@@ -54,57 +54,101 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('AI Assistant'),
         actions: [
-          TextButton(
+          TextButton.icon(
             onPressed: () => Navigator.of(context).pushReplacement(
               MaterialPageRoute(builder: (_) => AiIntakeScreen(profile: widget.profile)),
             ),
-            child: const Text('Book Service', style: TextStyle(color: Colors.white)),
+            icon: const Icon(Icons.auto_awesome, size: 16),
+            label: const Text('Book Service'),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (context, i) {
-                final m = _messages[i];
-                return Align(
-                  alignment: m.fromUser ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: m.fromUser
-                          ? Theme.of(context).colorScheme.primaryContainer
-                          : Theme.of(context).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(12),
+            child: _messages.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(color: scheme.primaryContainer, shape: BoxShape.circle),
+                          child: Icon(Icons.smart_toy_outlined, size: 32, color: scheme.onPrimaryContainer),
+                        ),
+                        const SizedBox(height: 12),
+                        Text('Ask me anything about your problem', style: TextStyle(color: scheme.onSurfaceVariant)),
+                      ],
                     ),
-                    child: Text(m.text),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, i) {
+                      final m = _messages[i];
+                      return Align(
+                        alignment: m.fromUser ? Alignment.centerRight : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          constraints: const BoxConstraints(maxWidth: 320),
+                          decoration: BoxDecoration(
+                            color: m.fromUser ? scheme.primaryContainer : scheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.only(
+                              topLeft: const Radius.circular(16),
+                              topRight: const Radius.circular(16),
+                              bottomLeft: Radius.circular(m.fromUser ? 16 : 4),
+                              bottomRight: Radius.circular(m.fromUser ? 4 : 16),
+                            ),
+                          ),
+                          child: Text(m.text,
+                              style: TextStyle(
+                                  color: m.fromUser ? scheme.onPrimaryContainer : scheme.onSurfaceVariant)),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
-          if (_sending) const Padding(padding: EdgeInsets.all(8), child: LinearProgressIndicator()),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: const InputDecoration(hintText: 'Type a message...'),
-                    onSubmitted: (_) => _send(),
+          if (_sending)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(minHeight: 3, color: scheme.primary),
+              ),
+            ),
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              border: Border(top: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.4))),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: const InputDecoration(hintText: 'Type a message...'),
+                      onSubmitted: (_) => _send(),
+                    ),
                   ),
-                ),
-                IconButton(icon: const Icon(Icons.send), onPressed: _sending ? null : _send),
-              ],
+                  const SizedBox(width: 8),
+                  IconButton.filled(
+                    icon: _sending
+                        ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.arrow_upward),
+                    onPressed: _sending ? null : _send,
+                  ),
+                ],
+              ),
             ),
           ),
         ],

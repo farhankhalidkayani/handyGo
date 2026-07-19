@@ -103,13 +103,17 @@ class _OperationsMapBodyState extends State<OperationsMapBody> {
             ))
         .toList();
 
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          color: scheme.surfaceContainerLow,
           child: Wrap(
-            spacing: 12,
-            children: [
+            spacing: 10,
+            runSpacing: 6,
+            children: const [
               _Legend(color: Colors.blue, label: 'Confirmed'),
               _Legend(color: Colors.orange, label: 'On the way'),
               _Legend(color: Colors.green, label: 'In progress'),
@@ -143,13 +147,20 @@ class _Legend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.circle, color: color, size: 12),
-        const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 12)),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.circle, color: color, size: 10),
+          const SizedBox(width: 5),
+          Text(label, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600)),
+        ],
+      ),
     );
   }
 }

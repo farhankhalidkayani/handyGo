@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:handygo_shared/handygo_shared.dart';
 
 import '../services/app_services.dart';
@@ -198,6 +199,7 @@ class _OffersScreenState extends State<OffersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final sentOffers = _offers.where((o) => o.status == 'sent').toList();
     final bestPrice = sentOffers.isEmpty
         ? null
@@ -221,6 +223,7 @@ class _OffersScreenState extends State<OffersScreen> {
               tooltip: 'See nearby workers',
               onPressed: _openNearbyWorkers,
             ),
+          const SizedBox(width: 8),
         ],
       ),
       body: _loading
@@ -229,45 +232,103 @@ class _OffersScreenState extends State<OffersScreen> {
               children: [
                 if (_error != null)
                   Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                    padding: const EdgeInsets.all(16),
+                    child: Text(_error!, style: TextStyle(color: scheme.error)),
                   ),
                 if (sentOffers.isEmpty)
-                  const Expanded(
-                    child: Center(child: Text('Waiting for workers to send offers...')),
+                  Expanded(
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 32,
+                            height: 32,
+                            child: CircularProgressIndicator(strokeWidth: 2.5, color: scheme.primary),
+                          ),
+                          const SizedBox(height: 16),
+                          Text('Waiting for workers to send offers...',
+                              style: TextStyle(color: scheme.onSurfaceVariant)),
+                        ],
+                      ),
+                    ),
                   )
                 else
                   Expanded(
                     child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                       itemCount: sentOffers.length,
                       itemBuilder: (context, i) {
                         final offer = sentOffers[i];
-                        final tags = <String>[
-                          if (offer == bestPrice) 'Best price',
-                          if (offer == fastest) 'Fastest',
-                          if (offer.id == _topRatedOfferId) 'Top rated',
-                          if (offer.id == _bestMatchOfferId) 'Best match',
+                        final tags = <(String, IconData)>[
+                          if (offer == bestPrice) ('Best price', Icons.savings_outlined),
+                          if (offer == fastest) ('Fastest', Icons.bolt_outlined),
+                          if (offer.id == _topRatedOfferId) ('Top rated', Icons.star_outline),
+                          if (offer.id == _bestMatchOfferId) ('Best match', Icons.auto_awesome),
                         ];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        final isHighlighted = tags.isNotEmpty;
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            color: scheme.surfaceContainerLow,
+                            border: isHighlighted
+                                ? Border.all(color: scheme.primary.withValues(alpha: 0.5), width: 1.5)
+                                : null,
+                          ),
                           child: Padding(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(18),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Rs. ${offer.quote.toStringAsFixed(0)}',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                                if (offer.etaMins != null) Text('ETA: ${offer.etaMins} mins'),
-                                if (offer.message != null && offer.message!.isNotEmpty)
-                                  Text(offer.message!),
-                                if (offer.flaggedSuspicious)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 8),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Rs. ${offer.quote.toStringAsFixed(0)}',
+                                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24),
+                                          ),
+                                          if (offer.etaMins != null) ...[
+                                            const SizedBox(height: 2),
+                                            Row(
+                                              children: [
+                                                Icon(Icons.schedule, size: 14, color: scheme.onSurfaceVariant),
+                                                const SizedBox(width: 4),
+                                                Text('ETA: ${offer.etaMins} mins',
+                                                    style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13)),
+                                              ],
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                    FilledButton(
+                                      onPressed: _accepting ? null : () => _accept(offer),
+                                      child: const Text('Accept'),
+                                    ),
+                                  ],
+                                ),
+                                if (offer.message != null && offer.message!.isNotEmpty) ...[
+                                  const SizedBox(height: 10),
+                                  Text(offer.message!, style: TextStyle(color: scheme.onSurfaceVariant)),
+                                ],
+                                if (offer.flaggedSuspicious) ...[
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
                                     child: Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        const Icon(Icons.warning_amber, color: Colors.orange, size: 18),
-                                        const SizedBox(width: 6),
+                                        Icon(Icons.warning_amber_rounded, color: Colors.orange.shade800, size: 18),
+                                        const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
                                             'This quote looks unusual compared to similar jobs — double-check before accepting.',
@@ -277,23 +338,42 @@ class _OffersScreenState extends State<OffersScreen> {
                                       ],
                                     ),
                                   ),
-                                if (tags.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 8),
-                                    child: Wrap(
-                                      spacing: 6,
-                                      children: tags.map((t) => Chip(label: Text(t))).toList(),
-                                    ),
+                                ],
+                                if (tags.isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: tags
+                                        .map((t) => Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                              decoration: BoxDecoration(
+                                                color: scheme.primaryContainer,
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(t.$2, size: 13, color: scheme.onPrimaryContainer),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    t.$1,
+                                                    style: TextStyle(
+                                                      color: scheme.onPrimaryContainer,
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ))
+                                        .toList(),
                                   ),
-                                const SizedBox(height: 12),
-                                FilledButton(
-                                  onPressed: _accepting ? null : () => _accept(offer),
-                                  child: const Text('Accept'),
-                                ),
+                                ],
                               ],
                             ),
                           ),
-                        );
+                        ).animate().fadeIn(duration: 250.ms, delay: (i * 60).ms).slideY(begin: 0.06, end: 0);
                       },
                     ),
                   ),

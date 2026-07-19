@@ -29,8 +29,30 @@ class UnderReviewScreen extends StatelessWidget {
     );
   }
 
+  IconData get _icon {
+    switch (status) {
+      case 'rejected':
+        return Icons.cancel_outlined;
+      case 'suspended':
+        return Icons.pause_circle_outline;
+      default:
+        return Icons.hourglass_top_outlined;
+    }
+  }
+
+  Color _iconColor(ColorScheme scheme) {
+    switch (status) {
+      case 'rejected':
+      case 'suspended':
+        return Colors.red;
+      default:
+        return scheme.primary;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Verification'),
@@ -42,9 +64,13 @@ class UnderReviewScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.hourglass_top, size: 64),
-              const SizedBox(height: 16),
-              Text(_message, textAlign: TextAlign.center),
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(color: _iconColor(scheme).withValues(alpha: 0.12), shape: BoxShape.circle),
+                child: Icon(_icon, size: 48, color: _iconColor(scheme)),
+              ),
+              const SizedBox(height: 20),
+              Text(_message, textAlign: TextAlign.center, style: TextStyle(color: scheme.onSurfaceVariant)),
             ],
           ),
         ),

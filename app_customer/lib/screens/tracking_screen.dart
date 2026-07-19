@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:handygo_shared/handygo_shared.dart';
 import 'package:latlong2/latlong.dart' as latlong;
@@ -26,6 +27,20 @@ const _statusLabels = {
   BookingStatus.completed: 'Completed',
   BookingStatus.cancelled: 'Cancelled',
   BookingStatus.disputed: 'Disputed',
+};
+
+const _statusIcons = {
+  BookingStatus.workerSelected: Icons.person_search_outlined,
+  BookingStatus.confirmed: Icons.check_circle_outline,
+  BookingStatus.workerOnTheWay: Icons.directions_car_filled_outlined,
+  BookingStatus.workerArrived: Icons.location_on_outlined,
+  BookingStatus.serviceStarted: Icons.build_outlined,
+  BookingStatus.inProgress: Icons.build_circle_outlined,
+  BookingStatus.completionRequested: Icons.task_alt_outlined,
+  BookingStatus.paymentPending: Icons.hourglass_top_outlined,
+  BookingStatus.completed: Icons.celebration_outlined,
+  BookingStatus.cancelled: Icons.cancel_outlined,
+  BookingStatus.disputed: Icons.gavel_outlined,
 };
 
 /// Full map/ETA/chat/call/SOS tracking UI (plan §12) is a larger follow-up — this screen
@@ -275,6 +290,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
     if (booking == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -319,123 +335,289 @@ class _TrackingScreenState extends State<TrackingScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _statusLabels[booking.status] ?? booking.status.wire,
-              style: Theme.of(context).textTheme.headlineSmall,
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [scheme.primary, scheme.primary.withValues(alpha: 0.75)],
+              ),
             ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: scheme.onPrimary.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(_statusIcons[booking.status] ?? Icons.info_outline, color: scheme.onPrimary, size: 26),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    _statusLabels[booking.status] ?? booking.status.wire,
+                    style: TextStyle(color: scheme.onPrimary, fontWeight: FontWeight.w700, fontSize: 18),
+                  ),
+                ),
+              ],
+            ),
+          ).animate().fadeIn(duration: 300.ms),
+          if (booking.otp != null) ...[
             const SizedBox(height: 16),
-            if (booking.otp != null) ...[
-              const Text('Share this code with the worker to start the service:'),
-              const SizedBox(height: 8),
-              Text(booking.otp!, style: Theme.of(context).textTheme.displaySmall),
-              const SizedBox(height: 16),
-            ],
-            if (booking.scheduledAt != null)
-              Text('Scheduled for: ${booking.scheduledAt!.toLocal()}'.split('.').first,
-                  style: const TextStyle(fontStyle: FontStyle.italic)),
-            if (booking.finalQuote != null) Text('Quote: Rs. ${booking.finalQuote!.toStringAsFixed(0)}'),
-            if (booking.paused) ...[
-              const SizedBox(height: 8),
-              const Text('This booking has been paused by an admin. Please contact support.',
-                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-            ],
-            if (booking.paymentBlocked) ...[
-              const SizedBox(height: 8),
-              const Text('Payment for this booking is on hold pending an admin review.',
-                  style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
-            ],
-            if (_trackedStatuses.contains(booking.status) && _workerPos != null) ...[
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 180,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: FlutterMap(
-                    options: MapOptions(initialCenter: _workerPos!, initialZoom: 13),
-                    children: [
-                      TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.handygo.customer',
+            DottedOtpCard(otp: booking.otp!),
+          ],
+          if (booking.scheduledAt != null || booking.finalQuote != null) ...[
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (booking.scheduledAt != null)
+                  _InfoChip(
+                    icon: Icons.event_outlined,
+                    label: 'Scheduled for: ${booking.scheduledAt!.toLocal()}'.split('.').first,
+                  ),
+                if (booking.finalQuote != null)
+                  _InfoChip(
+                    icon: Icons.payments_outlined,
+                    label: 'Quote: Rs. ${booking.finalQuote!.toStringAsFixed(0)}',
+                  ),
+              ],
+            ),
+          ],
+          if (booking.paused) ...[
+            const SizedBox(height: 16),
+            _WarningBanner(
+              color: Colors.red,
+              icon: Icons.pause_circle_outline,
+              text: 'This booking has been paused by an admin. Please contact support.',
+            ),
+          ],
+          if (booking.paymentBlocked) ...[
+            const SizedBox(height: 16),
+            _WarningBanner(
+              color: Colors.orange,
+              icon: Icons.block_outlined,
+              text: 'Payment for this booking is on hold pending an admin review.',
+            ),
+          ],
+          if (_trackedStatuses.contains(booking.status) && _workerPos != null) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 180,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: FlutterMap(
+                  options: MapOptions(initialCenter: _workerPos!, initialZoom: 13),
+                  children: [
+                    TileLayer(
+                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.handygo.customer',
+                    ),
+                    MarkerLayer(markers: [
+                      Marker(point: _workerPos!, child: const Icon(Icons.my_location, color: Colors.blue)),
+                      Marker(
+                        point: latlong.LatLng(booking.lat, booking.lng),
+                        child: const Icon(Icons.location_on, color: Colors.red),
                       ),
-                      MarkerLayer(markers: [
-                        Marker(point: _workerPos!, child: const Icon(Icons.my_location, color: Colors.blue)),
-                        Marker(
-                          point: latlong.LatLng(booking.lat, booking.lng),
-                          child: const Icon(Icons.location_on, color: Colors.red),
+                    ]),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          if (_error != null) ...[
+            const SizedBox(height: 16),
+            Text(_error!, style: TextStyle(color: scheme.error)),
+          ],
+          if (booking.status == BookingStatus.completionRequested) ...[
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: _busy ? null : _confirmAndPay,
+              icon: _busy
+                  ? const SizedBox(
+                      height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.check_circle_outline),
+              label: const Text('Confirm & pay (COD)'),
+            ),
+          ],
+          if ((booking.pendingAdditionalCharge ?? 0) > 0) ...[
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: scheme.tertiaryContainer,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.build_circle_outlined, color: scheme.onTertiaryContainer),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Worker requests Rs. ${booking.pendingAdditionalCharge!.toStringAsFixed(0)} for materials',
+                          style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onTertiaryContainer),
                         ),
-                      ]),
+                      ),
                     ],
                   ),
-                ),
-              ),
-            ],
-            const Spacer(),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Text(_error!, style: const TextStyle(color: Colors.red)),
-              ),
-            if (booking.status == BookingStatus.completionRequested)
-              FilledButton(
-                onPressed: _busy ? null : _confirmAndPay,
-                child: _busy
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator())
-                    : const Text('Confirm & pay (COD)'),
-              ),
-            if ((booking.pendingAdditionalCharge ?? 0) > 0) ...[
-              const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  if ((booking.pendingAdditionalChargeReason ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(booking.pendingAdditionalChargeReason!,
+                        style: TextStyle(color: scheme.onTertiaryContainer.withValues(alpha: 0.85))),
+                  ],
+                  const SizedBox(height: 14),
+                  Row(
                     children: [
-                      Text(
-                        'Worker requests Rs. ${booking.pendingAdditionalCharge!.toStringAsFixed(0)} for materials',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: _busy ? null : () => _respondToCharge(true),
+                          child: const Text('Approve'),
+                        ),
                       ),
-                      if ((booking.pendingAdditionalChargeReason ?? '').isNotEmpty)
-                        Text(booking.pendingAdditionalChargeReason!),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          FilledButton(
-                            onPressed: _busy ? null : () => _respondToCharge(true),
-                            child: const Text('Approve'),
-                          ),
-                          const SizedBox(width: 8),
-                          OutlinedButton(
-                            onPressed: _busy ? null : () => _respondToCharge(false),
-                            child: const Text('Decline'),
-                          ),
-                        ],
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _busy ? null : () => _respondToCharge(false),
+                          child: const Text('Decline'),
+                        ),
                       ),
                     ],
                   ),
-                ),
+                ],
               ),
-            ],
-            if (![BookingStatus.serviceStarted, BookingStatus.inProgress, BookingStatus.completionRequested]
-                .contains(booking.status)) ...[
-              const SizedBox(height: 16),
-              TextButton(
+            ),
+          ],
+          if (![BookingStatus.serviceStarted, BookingStatus.inProgress, BookingStatus.completionRequested]
+              .contains(booking.status)) ...[
+            const SizedBox(height: 16),
+            Center(
+              child: TextButton(
                 onPressed: _busy ? null : _cancelBooking,
                 child: const Text('Cancel booking'),
               ),
-            ],
+            ),
           ],
-        ),
+        ],
       ),
       floatingActionButton: SosButton(
         raisedByRole: 'customer',
         raisedById: widget.profile.id,
         bookingId: widget.bookingId,
         counterpartId: booking.workerId,
+      ),
+    );
+  }
+}
+
+/// A ticket-styled card for the service-start OTP — visually distinct so it reads as
+/// "the important code" at a glance rather than blending in with the rest of the screen.
+class DottedOtpCard extends StatelessWidget {
+  final String otp;
+
+  const DottedOtpCard({super.key, required this.otp});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.25), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.pin_outlined, size: 16, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text('Share this code with the worker to start the service',
+                    style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            otp.split('').join('  '),
+            style: TextStyle(
+              fontSize: 34,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 2,
+              color: scheme.primary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _InfoChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Text(label, style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+        ],
+      ),
+    );
+  }
+}
+
+class _WarningBanner extends StatelessWidget {
+  final Color color;
+  final IconData icon;
+  final String text;
+
+  const _WarningBanner({required this.color, required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+          ),
+        ],
       ),
     );
   }

@@ -103,10 +103,11 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Request a service')),
       body: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: ListView(
@@ -122,7 +123,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
                   }
                   return DropdownButtonFormField<String>(
                     initialValue: _selectedCategoryId,
-                    decoration: const InputDecoration(labelText: 'Category'),
+                    decoration: const InputDecoration(labelText: 'Category', prefixIcon: Icon(Icons.category_outlined)),
                     items: snapshot.data!
                         .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
                         .toList(),
@@ -140,7 +141,7 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _addressController,
-                decoration: const InputDecoration(labelText: 'Address'),
+                decoration: const InputDecoration(labelText: 'Address', prefixIcon: Icon(Icons.location_on_outlined)),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Address is required' : null,
               ),
               const SizedBox(height: 16),
@@ -152,21 +153,24 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
                     : 'Scheduled: ${_scheduledAt!.toLocal()}'.split('.').first),
               ),
               if (_scheduledAt != null)
-                TextButton(
-                  onPressed: () => setState(() => _scheduledAt = null),
-                  child: const Text('Cancel scheduling — book now instead'),
+                Center(
+                  child: TextButton(
+                    onPressed: () => setState(() => _scheduledAt = null),
+                    child: const Text('Cancel scheduling — book now instead'),
+                  ),
                 ),
               const SizedBox(height: 24),
-              if (_error != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Text(_error!, style: const TextStyle(color: Colors.red)),
-                ),
-              FilledButton(
+              if (_error != null) ...[
+                Text(_error!, style: TextStyle(color: scheme.error)),
+                const SizedBox(height: 12),
+              ],
+              FilledButton.icon(
                 onPressed: _submitting ? null : _submit,
-                child: _submitting
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator())
-                    : const Text('Find workers'),
+                icon: _submitting
+                    ? const SizedBox(
+                        height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.search),
+                label: const Text('Find workers'),
               ),
             ],
           ),

@@ -45,9 +45,21 @@ class _FinanceBodyState extends State<FinanceBody> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_error != null) return Center(child: Text(_error!, style: const TextStyle(color: Colors.red)));
-    if (_transactions.isEmpty) return const Center(child: Text('No transactions yet.'));
+    if (_error != null) return Center(child: Text(_error!, style: TextStyle(color: scheme.error)));
+    if (_transactions.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.receipt_long_outlined, size: 40, color: scheme.onSurfaceVariant),
+            const SizedBox(height: 10),
+            Text('No transactions yet.', style: TextStyle(color: scheme.onSurfaceVariant)),
+          ],
+        ),
+      );
+    }
 
     final totalRevenue = _transactions.fold<double>(0, (sum, t) => sum + t.total);
     final totalCommission = _transactions.fold<double>(0, (sum, t) => sum + t.commission);
@@ -64,52 +76,101 @@ class _FinanceBodyState extends State<FinanceBody> {
               spacing: 12,
               runSpacing: 12,
               children: [
-                _StatCard(label: 'Total revenue', value: 'Rs. ${totalRevenue.toStringAsFixed(0)}'),
-                _StatCard(label: 'Platform commission', value: 'Rs. ${totalCommission.toStringAsFixed(0)}'),
-                _StatCard(label: 'Paid to workers', value: 'Rs. ${totalPaidToWorkers.toStringAsFixed(0)}'),
-                _StatCard(label: 'Withdrawn', value: 'Rs. ${totalWithdrawn.toStringAsFixed(0)}'),
+                _StatCard(icon: Icons.payments_outlined, label: 'Total revenue', value: 'Rs. ${totalRevenue.toStringAsFixed(0)}'),
+                _StatCard(icon: Icons.percent_outlined, label: 'Platform commission', value: 'Rs. ${totalCommission.toStringAsFixed(0)}'),
+                _StatCard(icon: Icons.engineering_outlined, label: 'Paid to workers', value: 'Rs. ${totalPaidToWorkers.toStringAsFixed(0)}'),
+                _StatCard(icon: Icons.arrow_circle_down_outlined, label: 'Withdrawn', value: 'Rs. ${totalWithdrawn.toStringAsFixed(0)}'),
               ],
             ),
           ),
-          const TabBar(tabs: [Tab(text: 'Transactions'), Tab(text: 'Withdrawals')]),
+          TabBar(
+            tabs: const [Tab(text: 'Transactions'), Tab(text: 'Withdrawals')],
+            labelColor: scheme.primary,
+            unselectedLabelColor: scheme.onSurfaceVariant,
+            indicatorColor: scheme.primary,
+          ),
           Expanded(
             child: TabBarView(
               children: [
                 ListView.builder(
+                  padding: const EdgeInsets.all(12),
                   itemCount: _transactions.length,
                   itemBuilder: (context, i) {
                     final t = _transactions[i];
-                    return ListTile(
-                      title: Text('Rs. ${t.total.toStringAsFixed(0)} — ${t.method.toUpperCase()} (${t.status})'),
-                      subtitle: Text(
-                        'Service: Rs. ${t.serviceCharges.toStringAsFixed(0)} · Materials: Rs. ${t.materialCharges.toStringAsFixed(0)}\n'
-                        'Commission: Rs. ${t.commission.toStringAsFixed(0)} · Net to worker: Rs. ${t.netToWorker.toStringAsFixed(0)}',
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(16)),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: scheme.primaryContainer,
+                            child: Icon(Icons.receipt_outlined, size: 18, color: scheme.onPrimaryContainer),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Rs. ${t.total.toStringAsFixed(0)} — ${t.method.toUpperCase()} (${t.status})',
+                                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Service: Rs. ${t.serviceCharges.toStringAsFixed(0)} · Materials: Rs. ${t.materialCharges.toStringAsFixed(0)}\n'
+                                  'Commission: Rs. ${t.commission.toStringAsFixed(0)} · Net to worker: Rs. ${t.netToWorker.toStringAsFixed(0)}',
+                                  style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      isThreeLine: true,
                     );
                   },
                 ),
                 _withdrawals.isEmpty
-                    ? const Center(child: Text('No withdrawals yet.'))
+                    ? Center(child: Text('No withdrawals yet.', style: TextStyle(color: scheme.onSurfaceVariant)))
                     : ListView.builder(
+                        padding: const EdgeInsets.all(12),
                         itemCount: _withdrawals.length,
                         itemBuilder: (context, i) {
                           final w = _withdrawals[i];
-                          return ListTile(
-                            title: Text('Rs. ${w.amount.toStringAsFixed(0)} — ${w.status}'),
-                            subtitle: Text('Worker: ${w.workerId} · ${w.createdAt.toLocal()}'),
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(16)),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: scheme.secondaryContainer,
+                                  child: Icon(Icons.arrow_circle_down_outlined, size: 18, color: scheme.onSecondaryContainer),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Rs. ${w.amount.toStringAsFixed(0)} — ${w.status}',
+                                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                                      Text('Worker: ${w.workerId} · ${w.createdAt.toLocal()}',
+                                          style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           );
                         },
                       ),
               ],
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.all(8),
+          Padding(
+            padding: const EdgeInsets.all(12),
             child: Text(
               'No failed-payment view — payment is instant COD settlement (no gateway that '
               'can actually fail), so there\'s nothing that scenario would show today.',
-              style: TextStyle(fontSize: 11, color: Colors.grey),
+              style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
           ),
@@ -120,24 +181,28 @@ class _FinanceBodyState extends State<FinanceBody> {
 }
 
 class _StatCard extends StatelessWidget {
+  final IconData icon;
   final String label;
   final String value;
 
-  const _StatCard({required this.label, required this.value});
+  const _StatCard({required this.icon, required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(value, style: Theme.of(context).textTheme.titleMedium),
-            Text(label, style: const TextStyle(color: Colors.grey)),
-          ],
-        ),
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: 150,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(18)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: scheme.primary),
+          const SizedBox(height: 10),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+          Text(label, style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12)),
+        ],
       ),
     );
   }

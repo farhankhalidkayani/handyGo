@@ -58,38 +58,83 @@ class _NearbyWorkersScreenState extends State<NearbyWorkersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Nearby workers')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
+              ? Center(child: Text(_error!, style: TextStyle(color: scheme.error)))
               : _candidates.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Text(
-                          'No verified workers with this skill are online nearby right now — '
-                          'workers can still send you an offer once they come online.',
-                          textAlign: TextAlign.center,
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.person_search_outlined, size: 40, color: scheme.onSurfaceVariant),
+                            const SizedBox(height: 12),
+                            Text(
+                              'No verified workers with this skill are online nearby right now — '
+                              'workers can still send you an offer once they come online.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: scheme.onSurfaceVariant),
+                            ),
+                          ],
                         ),
                       ),
                     )
                   : ListView.builder(
+                      padding: const EdgeInsets.all(16),
                       itemCount: _candidates.length,
                       itemBuilder: (context, i) {
                         final c = _candidates[i];
                         final isBest = c['isBestMatch'] == true;
-                        return Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          child: ListTile(
-                            leading: const Icon(Icons.person_outline),
-                            title: Text('Rating ${(c['rating'] as num).toStringAsFixed(1)}'
-                                ' · ${c['jobsCompleted']} jobs completed'),
-                            subtitle: Text(
-                              '${(c['dist'] as num).toStringAsFixed(1)} km away · ETA ~${c['etaMins']} mins',
-                            ),
-                            trailing: isBest ? const Chip(label: Text('Best match')) : null,
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: isBest ? scheme.primaryContainer.withValues(alpha: 0.4) : scheme.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(18),
+                            border: isBest ? Border.all(color: scheme.primary.withValues(alpha: 0.4)) : null,
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: scheme.secondaryContainer,
+                                child: Icon(Icons.person_outline, color: scheme.onSecondaryContainer, size: 20),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
+                                        const SizedBox(width: 2),
+                                        Text((c['rating'] as num).toStringAsFixed(1),
+                                            style: const TextStyle(fontWeight: FontWeight.w700)),
+                                        Text(' · ${c['jobsCompleted']} jobs completed',
+                                            style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13)),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${(c['dist'] as num).toStringAsFixed(1)} km away · ETA ~${c['etaMins']} mins',
+                                      style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (isBest)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(color: scheme.primary, borderRadius: BorderRadius.circular(10)),
+                                  child: Text('Best match',
+                                      style: TextStyle(color: scheme.onPrimary, fontSize: 11, fontWeight: FontWeight.w700)),
+                                ),
+                            ],
                           ),
                         );
                       },

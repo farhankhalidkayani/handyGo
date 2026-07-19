@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../services/app_services.dart';
 import 'home_screen.dart';
@@ -95,52 +96,84 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Log in / Sign up')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (_step == _Step.email) ...[
-              const Text('Enter your email — we will send you a one-time code.'),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email'),
-              ),
-              const SizedBox(height: 24),
-              if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
-              FilledButton(
-                onPressed: _busy ? null : _requestOtp,
-                child: _busy
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator())
-                    : const Text('Send code'),
-              ),
-            ] else ...[
-              Text('Enter the code sent to ${_emailController.text.trim()}'),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _otpController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: '6-digit code'),
-              ),
-              const SizedBox(height: 24),
-              if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
-              FilledButton(
-                onPressed: _busy ? null : _verifyOtp,
-                child: _busy
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator())
-                    : const Text('Verify'),
-              ),
-              TextButton(
-                onPressed: _busy ? null : () => setState(() => _step = _Step.email),
-                child: const Text('Use a different email'),
-              ),
-            ],
-          ],
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(color: scheme.primaryContainer, shape: BoxShape.circle),
+                    child: Icon(
+                      _step == _Step.email ? Icons.mail_outline : Icons.lock_outline,
+                      size: 32,
+                      color: scheme.onPrimaryContainer,
+                    ),
+                  ),
+                ).animate().fadeIn(duration: 250.ms).scale(begin: const Offset(0.85, 0.85)),
+                const SizedBox(height: 24),
+                if (_step == _Step.email) ...[
+                  Text('Enter your email — we will send you a one-time code.',
+                      textAlign: TextAlign.center, style: TextStyle(color: scheme.onSurfaceVariant)),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.alternate_email)),
+                  ),
+                  const SizedBox(height: 20),
+                  if (_error != null) ...[
+                    Text(_error!, style: TextStyle(color: scheme.error), textAlign: TextAlign.center),
+                    const SizedBox(height: 12),
+                  ],
+                  FilledButton.icon(
+                    onPressed: _busy ? null : _requestOtp,
+                    icon: _busy
+                        ? const SizedBox(
+                            height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.send_outlined),
+                    label: const Text('Send code'),
+                  ),
+                ] else ...[
+                  Text('Enter the code sent to ${_emailController.text.trim()}',
+                      textAlign: TextAlign.center, style: TextStyle(color: scheme.onSurfaceVariant)),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: _otpController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 22, letterSpacing: 6, fontWeight: FontWeight.w700),
+                    decoration: const InputDecoration(labelText: '6-digit code'),
+                  ),
+                  const SizedBox(height: 20),
+                  if (_error != null) ...[
+                    Text(_error!, style: TextStyle(color: scheme.error), textAlign: TextAlign.center),
+                    const SizedBox(height: 12),
+                  ],
+                  FilledButton.icon(
+                    onPressed: _busy ? null : _verifyOtp,
+                    icon: _busy
+                        ? const SizedBox(
+                            height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.check_circle_outline),
+                    label: const Text('Verify'),
+                  ),
+                  TextButton(
+                    onPressed: _busy ? null : () => setState(() => _step = _Step.email),
+                    child: const Text('Use a different email'),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
     );

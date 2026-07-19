@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:handygo_shared/handygo_shared.dart';
 
 import 'screens/splash_screen.dart';
 
@@ -13,7 +14,9 @@ class HandyGoCustomerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Handy Go — Customer',
-      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
+      theme: buildAppTheme(seedColor: Colors.deepPurple, brightness: Brightness.light),
+      darkTheme: buildAppTheme(seedColor: Colors.deepPurple, brightness: Brightness.dark),
+      themeMode: ThemeMode.system,
       home: const SplashScreen(),
     );
   }

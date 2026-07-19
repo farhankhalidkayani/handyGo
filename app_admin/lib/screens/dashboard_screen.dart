@@ -43,13 +43,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  static const _icons = [
+    (Icons.verified_user_outlined, Icons.verified_user),
+    (Icons.list_alt_outlined, Icons.list_alt),
+    (Icons.sos_outlined, Icons.sos),
+    (Icons.report_problem_outlined, Icons.report_problem),
+    (Icons.notifications_outlined, Icons.notifications),
+    (Icons.bar_chart_outlined, Icons.bar_chart),
+    (Icons.map_outlined, Icons.map),
+    (Icons.account_balance_outlined, Icons.account_balance),
+    (Icons.insights_outlined, Icons.insights),
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final isSos = _tab == 2;
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: Text(_titles[_tab]),
-        backgroundColor: _tab == 2 ? Colors.red.shade700 : null,
+        backgroundColor: isSos ? Colors.red.shade700 : null,
+        foregroundColor: isSos ? Colors.white : null,
+        iconTheme: isSos ? const IconThemeData(color: Colors.white) : null,
         actions: [IconButton(icon: const Icon(Icons.logout), onPressed: () => _logout(context))],
+      ),
+      drawer: NavigationDrawer(
+        selectedIndex: _tab,
+        onDestinationSelected: (i) {
+          setState(() => _tab = i);
+          Navigator.of(context).pop();
+        },
+        children: [
+          DrawerHeader(
+            child: Row(
+              children: [
+                Icon(Icons.admin_panel_settings_outlined, size: 32, color: scheme.primary),
+                const SizedBox(width: 12),
+                Text('Handy Go — Admin', style: Theme.of(context).textTheme.titleLarge),
+              ],
+            ),
+          ),
+          for (var i = 0; i < _titles.length; i++)
+            NavigationDrawerDestination(
+              icon: Icon(_icons[i].$1),
+              selectedIcon: Icon(_icons[i].$2),
+              label: Text(_titles[i]),
+            ),
+        ],
       ),
       body: IndexedStack(
         index: _tab,
@@ -63,21 +103,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           OperationsMapBody(),
           FinanceBody(),
           AiInsightsBody(),
-        ],
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.verified_user), label: 'Verify'),
-          NavigationDestination(icon: Icon(Icons.list_alt), label: 'Bookings'),
-          NavigationDestination(icon: Icon(Icons.sos), label: 'SOS'),
-          NavigationDestination(icon: Icon(Icons.report_problem), label: 'Fraud'),
-          NavigationDestination(icon: Icon(Icons.notifications), label: 'Alerts'),
-          NavigationDestination(icon: Icon(Icons.bar_chart), label: 'Analytics'),
-          NavigationDestination(icon: Icon(Icons.map_outlined), label: 'Map'),
-          NavigationDestination(icon: Icon(Icons.account_balance_outlined), label: 'Finance'),
-          NavigationDestination(icon: Icon(Icons.insights), label: 'Insights'),
         ],
       ),
     );

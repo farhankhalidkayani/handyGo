@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:handygo_shared/handygo_shared.dart';
 
 import '../services/app_services.dart';
@@ -100,83 +101,164 @@ class _SendOfferScreenState extends State<SendOfferScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Send offer')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: ListView(
-          children: [
-            Text(widget.booking.problemText),
-            Text(widget.booking.addressText, style: const TextStyle(color: Colors.grey)),
-            if (_customerRiskScore != null && _customerRiskScore! < 50)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(18)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.booking.problemText, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                const SizedBox(height: 4),
+                Row(
                   children: [
-                    const Icon(Icons.warning_amber, color: Colors.red, size: 18),
-                    const SizedBox(width: 6),
+                    Icon(Icons.location_on_outlined, size: 14, color: scheme.onSurfaceVariant),
+                    const SizedBox(width: 4),
                     Expanded(
-                      child: Text(
-                        'This customer has a low trust score ($_customerRiskScore/100) from past cancellations or reports — proceed carefully.',
-                        style: TextStyle(color: Colors.red.shade800, fontSize: 12),
-                      ),
+                      child: Text(widget.booking.addressText, style: TextStyle(color: scheme.onSurfaceVariant)),
                     ),
                   ],
                 ),
-              ),
-            const SizedBox(height: 16),
-            if (_loadingSuggestion)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: Row(
-                  children: [
-                    SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                    SizedBox(width: 8),
-                    Text('Getting AI quote suggestion...'),
-                  ],
-                ),
-              ),
-            if (_suggestedTools.isNotEmpty || _suggestedMaterials.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_suggestedTools.isNotEmpty) Text('Suggested tools: ${_suggestedTools.join(', ')}'),
-                    if (_suggestedMaterials.isNotEmpty)
-                      Text('Suggested materials: ${_suggestedMaterials.join(', ')}'),
-                  ],
-                ),
-              ),
-            TextField(
-              controller: _quoteController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Your quote (Rs.) — AI-suggested, editable'),
+              ],
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _etaController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'ETA (mins)'),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _messageController,
-              decoration: const InputDecoration(labelText: 'Message — AI-drafted, editable'),
-              maxLines: 2,
-            ),
-            const SizedBox(height: 24),
-            if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
-            FilledButton(
-              onPressed: _sending ? null : _send,
-              child: _sending
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator())
-                  : const Text('Send'),
+          ),
+          if (_customerRiskScore != null && _customerRiskScore! < 50) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.warning_amber, color: Colors.red.shade700, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This customer has a low trust score ($_customerRiskScore/100) from past cancellations or reports — proceed carefully.',
+                      style: TextStyle(color: Colors.red.shade800, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
-        ),
+          const SizedBox(height: 16),
+          if (_loadingSuggestion)
+            Row(
+              children: [
+                SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: scheme.primary)),
+                const SizedBox(width: 10),
+                Text('Getting AI quote suggestion...', style: TextStyle(color: scheme.onSurfaceVariant)),
+              ],
+            ),
+          if (_suggestedTools.isNotEmpty || _suggestedMaterials.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(color: scheme.primaryContainer, borderRadius: BorderRadius.circular(16)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.auto_awesome, size: 15, color: scheme.onPrimaryContainer),
+                      const SizedBox(width: 6),
+                      Text('AI suggestions',
+                          style: TextStyle(
+                              color: scheme.onPrimaryContainer, fontWeight: FontWeight.w700, fontSize: 12)),
+                    ],
+                  ),
+                  if (_suggestedTools.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _ChipRow(icon: Icons.build_outlined, items: _suggestedTools, scheme: scheme),
+                  ],
+                  if (_suggestedMaterials.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _ChipRow(icon: Icons.inventory_2_outlined, items: _suggestedMaterials, scheme: scheme),
+                  ],
+                ],
+              ),
+            ).animate().fadeIn(duration: 300.ms),
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: TextField(
+                  controller: _quoteController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Your quote (Rs.)', prefixIcon: Icon(Icons.payments_outlined)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _etaController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'ETA (mins)', prefixIcon: Icon(Icons.schedule)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _messageController,
+            decoration: const InputDecoration(labelText: 'Message — AI-drafted, editable'),
+            maxLines: 2,
+          ),
+          const SizedBox(height: 24),
+          if (_error != null) ...[
+            Text(_error!, style: TextStyle(color: scheme.error)),
+            const SizedBox(height: 12),
+          ],
+          FilledButton.icon(
+            onPressed: _sending ? null : _send,
+            icon: _sending
+                ? const SizedBox(
+                    height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.send_outlined),
+            label: const Text('Send'),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _ChipRow extends StatelessWidget {
+  final IconData icon;
+  final List<String> items;
+  final ColorScheme scheme;
+
+  const _ChipRow({required this.icon, required this.items, required this.scheme});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: items
+          .map((item) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: scheme.surface.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: 12, color: scheme.onPrimaryContainer),
+                    const SizedBox(width: 4),
+                    Text(item, style: TextStyle(fontSize: 11, color: scheme.onPrimaryContainer)),
+                  ],
+                ),
+              ))
+          .toList(),
     );
   }
 }

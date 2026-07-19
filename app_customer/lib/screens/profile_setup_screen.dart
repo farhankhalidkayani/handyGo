@@ -89,39 +89,55 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Set up your profile')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Full name'),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(color: scheme.primaryContainer, shape: BoxShape.circle),
+                      child: Icon(Icons.person_outline, size: 32, color: scheme.onPrimaryContainer),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(labelText: 'Full name', prefixIcon: Icon(Icons.badge_outlined)),
+                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _phoneController,
+                    decoration: const InputDecoration(
+                        labelText: 'Phone (e.g. +923001234567)', prefixIcon: Icon(Icons.phone_outlined)),
+                    keyboardType: TextInputType.phone,
+                  ),
+                  const SizedBox(height: 24),
+                  if (_error != null) ...[
+                    Text(_error!, style: TextStyle(color: scheme.error)),
+                    const SizedBox(height: 12),
+                  ],
+                  FilledButton.icon(
+                    onPressed: _saving ? null : _save,
+                    icon: _saving
+                        ? const SizedBox(
+                            height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.arrow_forward),
+                    label: const Text('Continue'),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _phoneController,
-                decoration: const InputDecoration(labelText: 'Phone (e.g. +923001234567)'),
-                keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 24),
-              if (_error != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Text(_error!, style: const TextStyle(color: Colors.red)),
-                ),
-              FilledButton(
-                onPressed: _saving ? null : _save,
-                child: _saving
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator())
-                    : const Text('Continue'),
-              ),
-            ],
+            ),
           ),
         ),
       ),

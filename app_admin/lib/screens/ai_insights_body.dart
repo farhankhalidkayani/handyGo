@@ -59,45 +59,87 @@ class _AiInsightsBodyState extends State<AiInsightsBody> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_error != null) return Center(child: Text(_error!, style: const TextStyle(color: Colors.red)));
+    if (_error != null) return Center(child: Text(_error!, style: TextStyle(color: scheme.error)));
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text('Chat-scan flags', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
+        Row(
+          children: [
+            Icon(Icons.forum_outlined, size: 18, color: scheme.onSurfaceVariant),
+            const SizedBox(width: 6),
+            Text('Chat-scan flags', style: Theme.of(context).textTheme.titleMedium),
+          ],
+        ),
+        const SizedBox(height: 10),
         if (_flaggedMessages.isEmpty)
-          const Text('No flagged messages.')
+          Text('No flagged messages.', style: TextStyle(color: scheme.onSurfaceVariant))
         else
-          ..._flaggedMessages.map((m) => Card(
-                color: Colors.orange.withValues(alpha: 0.1),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(m.flagReason ?? 'Flagged', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      Text(m.text),
-                      const SizedBox(height: 4),
-                      Text('Booking ${m.bookingId} · ${m.senderRole}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                    ],
-                  ),
+          ..._flaggedMessages.map((m) => Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border(left: BorderSide(color: Colors.orange, width: 4)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, size: 15, color: Colors.orange.shade800),
+                        const SizedBox(width: 6),
+                        Text(m.flagReason ?? 'Flagged',
+                            style: TextStyle(fontWeight: FontWeight.w700, color: Colors.orange.shade800)),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(m.text),
+                    const SizedBox(height: 4),
+                    Text('Booking ${m.bookingId} · ${m.senderRole}',
+                        style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12)),
+                  ],
                 ),
               )),
-        const SizedBox(height: 24),
-        Text('Worker performance flags', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
+        const SizedBox(height: 28),
+        Row(
+          children: [
+            Icon(Icons.trending_down, size: 18, color: scheme.onSurfaceVariant),
+            const SizedBox(width: 6),
+            Text('Worker performance flags', style: Theme.of(context).textTheme.titleMedium),
+          ],
+        ),
+        const SizedBox(height: 10),
         if (_lowPerformers.isEmpty)
-          const Text('No workers currently flagged for low performance.')
+          Text('No workers currently flagged for low performance.',
+              style: TextStyle(color: scheme.onSurfaceVariant))
         else
-          ..._lowPerformers.map((w) => Card(
-                color: Colors.red.withValues(alpha: 0.05),
-                child: ListTile(
-                  title: Text('Performance score: ${w.performanceScore}/100'),
-                  subtitle: Text('Rating ${w.rating.toStringAsFixed(1)} · ${w.jobsCompleted} jobs completed'),
-                  trailing: const Icon(Icons.trending_down, color: Colors.red),
+          ..._lowPerformers.map((w) => Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border(left: BorderSide(color: Colors.red.shade300, width: 4)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Performance score: ${w.performanceScore}/100',
+                              style: const TextStyle(fontWeight: FontWeight.w700)),
+                          Text('Rating ${w.rating.toStringAsFixed(1)} · ${w.jobsCompleted} jobs completed',
+                              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.trending_down, color: Colors.red),
+                  ],
                 ),
               )),
       ],

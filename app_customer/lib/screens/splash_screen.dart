@@ -56,8 +56,24 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
+    final scheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(color: scheme.primaryContainer, shape: BoxShape.circle),
+              child: Icon(Icons.handyman_outlined, size: 40, color: scheme.onPrimaryContainer),
+            ),
+            const SizedBox(height: 16),
+            Text('Handy Go', style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 24),
+            CircularProgressIndicator(color: scheme.primary),
+          ],
+        ),
+      ),
     );
   }
 }

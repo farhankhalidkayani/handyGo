@@ -11,6 +11,23 @@ const _terminalStatuses = [
   BookingStatus.refunded,
 ];
 
+Color _statusColor(BookingStatus s) {
+  switch (s) {
+    case BookingStatus.completed:
+      return Colors.green;
+    case BookingStatus.cancelled:
+    case BookingStatus.refunded:
+      return Colors.grey;
+    case BookingStatus.disputed:
+      return Colors.red;
+    case BookingStatus.searchingWorkers:
+    case BookingStatus.offersReceived:
+      return Colors.orange;
+    default:
+      return Colors.blue;
+  }
+}
+
 /// Plan §12 Admin Panel checklist: "Booking management (full detail + audit history +
 /// actions)" + §10.4 dispute resolution (raise a dispute off a non-terminal booking, then
 /// resolve it to refunded/completed — both legal `disputed` exits per transitionBooking.js's
@@ -271,37 +288,76 @@ class _BookingsBodyState extends State<BookingsBody> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_bookings.isEmpty) return const Center(child: Text('No bookings yet.'));
+    if (_bookings.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.list_alt_outlined, size: 40, color: scheme.onSurfaceVariant),
+            const SizedBox(height: 10),
+            Text('No bookings yet.', style: TextStyle(color: scheme.onSurfaceVariant)),
+          ],
+        ),
+      );
+    }
     return Column(
       children: [
         if (_error != null)
           Padding(
-            padding: const EdgeInsets.all(8),
-            child: Text(_error!, style: const TextStyle(color: Colors.red)),
+            padding: const EdgeInsets.all(12),
+            child: Text(_error!, style: TextStyle(color: scheme.error)),
           ),
         Expanded(
           child: ListView.builder(
+            padding: const EdgeInsets.all(16),
             itemCount: _bookings.length,
             itemBuilder: (context, i) {
               final b = _bookings[i];
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              final statusColor = _statusColor(b.status);
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(20),
+                ),
                 child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
                   onTap: () => _showDetail(b),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(b.problemText),
+                        Text(b.problemText, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
                         const SizedBox(height: 4),
-                        Text('${b.addressText}\n${b.status.wire}'),
-                        if (b.finalQuote != null)
-                          Text('Rs. ${b.finalQuote!.toStringAsFixed(0)}'),
+                        Text(b.addressText, style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13)),
                         const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                b.status.wire,
+                                style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                            if (b.finalQuote != null) ...[
+                              const SizedBox(width: 8),
+                              Text('Rs. ${b.finalQuote!.toStringAsFixed(0)}',
+                                  style: const TextStyle(fontWeight: FontWeight.w700)),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 12),
                         Wrap(
                           spacing: 8,
+                          runSpacing: 8,
                           children: [
                             if (b.status == BookingStatus.disputed) ...[
                               FilledButton(

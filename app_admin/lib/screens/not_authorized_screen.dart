@@ -17,6 +17,7 @@ class NotAuthorizedScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(24),
@@ -24,14 +25,23 @@ class NotAuthorizedScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.block, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              const Text(
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.12), shape: BoxShape.circle),
+                child: const Icon(Icons.block, size: 48, color: Colors.red),
+              ),
+              const SizedBox(height: 20),
+              Text(
                 'This account does not have admin access.',
                 textAlign: TextAlign.center,
+                style: TextStyle(color: scheme.onSurfaceVariant),
               ),
               const SizedBox(height: 24),
-              FilledButton(onPressed: () => _logout(context), child: const Text('Log out')),
+              FilledButton.icon(
+                onPressed: () => _logout(context),
+                icon: const Icon(Icons.logout),
+                label: const Text('Log out'),
+              ),
             ],
           ),
         ),
